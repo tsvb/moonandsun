@@ -8,7 +8,10 @@ This project is a simple Flask web application that generates planetary position
 2. Create a virtual environment (recommended) and install dependencies:
 
 ```bash
+python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
+pip install -r requirements-dev.txt  # for running tests
 ```
 
 ## Running
@@ -20,3 +23,11 @@ python app.py
 ```
 
 Visit `http://localhost:5000` in your browser and enter your birth details to generate the planetary positions.
+
+## Testing
+
+Run the automated tests with:
+
+```bash
+pytest
+```
