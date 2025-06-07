@@ -1,0 +1,19 @@
+<!doctype html>
+<html>
+<head>
+  <title>Natal Chart Results</title>
+</head>
+<body>
+  <h1>Natal Chart</h1>
+  <p>Birth time (local): {{ dt }}</p>
+  <p>Converted to UTC: {{ dt_utc }}</p>
+  <p>Coordinates: {{ lat }}, {{ lon }}</p>
+  <table border="1">
+    <tr><th>Body</th><th>Longitude (deg)</th></tr>
+    {% for name, position in positions.items() %}
+    <tr><td>{{ name }}</td><td>{{ '%.2f'|format(position) }}</td></tr>
+    {% endfor %}
+  </table>
+  <a href="{{ url_for('index') }}">Back</a>
+</body>
+</html>

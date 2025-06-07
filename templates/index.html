@@ -1,0 +1,22 @@
+<!doctype html>
+<html>
+<head>
+  <title>Natal Chart Generator</title>
+</head>
+<body>
+  <h1>Generate your natal chart</h1>
+  <form method="post">
+    <label>Date of birth:</label>
+    <input type="date" name="date" required><br>
+    <label>Time of birth:</label>
+    <input type="time" name="time" required><br>
+    <label>Timezone offset from UTC (e.g., -5 for EST):</label>
+    <input type="number" name="tz_offset" step="any" required><br>
+    <label>Latitude:</label>
+    <input type="number" name="latitude" step="any" required><br>
+    <label>Longitude:</label>
+    <input type="number" name="longitude" step="any" required><br>
+    <button type="submit">Generate</button>
+  </form>
+</body>
+</html>
