@@ -22,6 +22,9 @@ Chart wheel size can be customised by setting `CHART_FIGSIZE` to a comma
 separated width and height (e.g. `7,7`).
 The `CHART_THEME` variable toggles between light and dark colors. Setting
 `CHART_INTERACTIVE=1` enables a D3-powered interactive wheel with tooltips.
+Setting `WEBGL_WHEEL=1` uses a WebGL renderer for the wheel. If `REDIS_URL` is
+set computed charts are cached in Redis and providing `DATABASE_URL` stores
+chart metadata in PostgreSQL.
 
 The web UI supports a dark/light toggle and basic PWA features. A
 service worker caches pages for offline use and a `manifest.json`
@@ -101,11 +104,11 @@ Potential frontend upgrades include:
 - **Flask + HTMX** for lighter enhancements.
 - **Vue.js + Flask API** as a balanced approach.
 
-### Phase 4: Technical Excellence (1-2 weeks)
+-### Phase 4: Technical Excellence (1-2 weeks)
 
 Focus areas for performance optimization:
 
-- **Caching**: Redis to store computed charts.
-- **Database**: PostgreSQL for chart metadata.
+- **Caching**: refine Redis usage for computed charts.
+- **Database**: optimise the PostgreSQL schema for chart metadata.
 - **API**: Pagination and filtering for chart lists.
 - **Chart generation**: WebGL-driven interactive wheels.
