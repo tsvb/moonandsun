@@ -18,6 +18,8 @@ The `requirements.txt` file now includes `matplotlib` which is used to draw the 
 
 The application uses Flask sessions and expects a secret key. Set the
 `SECRET_KEY` environment variable to override the default development key.
+Chart wheel size can be customised by setting `CHART_FIGSIZE` to a comma
+separated width and height (e.g. `7,7`).
 
 ## Running
 
@@ -45,6 +47,9 @@ You can download or delete individual charts. The stored metadata includes the
 birth details, coordinates and chosen house system so charts remain identifiable.
 Saved image filenames incorporate the chart name and birth timestamp instead of
 generic numbers.
+
+Old chart images older than 30 days or removed from the index are cleaned up
+automatically when the application starts.
 
 ## Packaging
 
