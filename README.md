@@ -71,6 +71,18 @@ pyinstaller natal_chart.spec
 
 The resulting executable will be placed in the `dist/` directory. If you added `icons/icon.ico` before building on Windows (or `icon.icns` on macOS) the installer will include it automatically.
 
+### Windows installer
+
+To build a traditional Windows installer install [NSIS](https://nsis.sourceforge.io/)
+and run:
+
+```bash
+makensis installer.nsi
+```
+
+This produces `moonandsun_setup.exe` that installs the packaged application to
+`Program Files/MoonAndSun` with desktop and Start Menu shortcuts.
+
 ## Time-Based Features
 
 Additional helpers calculate progressed and return charts:
