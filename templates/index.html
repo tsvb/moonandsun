@@ -5,10 +5,13 @@
   <meta name="description" content="Generate a natal chart with planetary positions, houses and aspects.">
   <meta name="keywords" content="astrology, natal chart, birth chart, horoscope, planets, houses, ascendant, aspects, chart wheel">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <meta name="theme-color" content="#ffffff">
 </head>
 <body>
   <h1>Generate your natal chart</h1>
+  <button id="theme-toggle" type="button">Dark mode</button>
   {% with messages = get_flashed_messages() %}
     {% if messages %}
       <ul class="flashes">
@@ -48,11 +51,25 @@
   <script>
     const form = document.querySelector('form');
     const loading = document.getElementById('loading');
+    const toggleBtn = document.getElementById('theme-toggle');
+    const setTheme = theme => {
+      document.documentElement.dataset.theme = theme;
+      localStorage.setItem('theme', theme);
+      toggleBtn.textContent = theme === 'dark' ? 'Light mode' : 'Dark mode';
+    };
+    setTheme(localStorage.getItem('theme') || 'light');
+    toggleBtn.addEventListener('click', () => {
+      const cur = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+      setTheme(cur);
+    });
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       document.body.classList.add('show-loading');
       setTimeout(() => form.submit(), 0);
     });
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/static/service-worker.js');
+    }
   </script>
   <p><a href="{{ url_for('list_charts') }}">View saved charts</a></p>
 </body>
