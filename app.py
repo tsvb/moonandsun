@@ -38,6 +38,11 @@ ASPECTS_INFO = {
     'Square': {'angle': 90, 'orb': 6},
     'Trine': {'angle': 120, 'orb': 6},
     'Sextile': {'angle': 60, 'orb': 4},
+    # Extended aspects
+    'Quincunx': {'angle': 150, 'orb': 3},
+    'Semi-sextile': {'angle': 30, 'orb': 2},
+    'Semi-square': {'angle': 45, 'orb': 2},
+    'Sesquiquadrate': {'angle': 135, 'orb': 2},
 }
 
 
@@ -128,7 +133,7 @@ def angular_distance(lon1, lon2):
 
 
 def compute_aspects(positions):
-    """Return list of major aspects between bodies with orb and strength."""
+    """Return list of aspects between bodies with orb and strength."""
     aspects = []
     names = list(positions.keys())
     for i in range(len(names)):
