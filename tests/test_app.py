@@ -83,7 +83,6 @@ def test_compute_retrogrades():
     assert not retro_direct['Mercury']
     assert retro_retro['Mercury']
 
-
 def test_city_lookup_failure(monkeypatch):
     client = app.test_client()
     data = {
@@ -103,4 +102,3 @@ def test_city_lookup_failure(monkeypatch):
     resp = client.post('/', data=data)
     assert resp.status_code == 200
     assert b'City lookup failed' in resp.data
-
