@@ -316,10 +316,12 @@ def compute_aspects(positions):
     return aspects
 
 
-def draw_chart_wheel(positions, cusps, aspects=None):
+def draw_chart_wheel(positions, cusps, aspects=None, retrogrades=None):
     """Return base64-encoded PNG of an improved chart wheel."""
     if aspects is None:
         aspects = []
+    if retrogrades is None:
+        retrogrades = {}
 
     fig, ax = plt.subplots(figsize=(6, 6))
     ax.set_aspect('equal')
@@ -366,6 +368,8 @@ def draw_chart_wheel(positions, cusps, aspects=None):
         ax.plot(x, y, 'o', color='black', markersize=5)
         glyph = PLANET_GLYPHS.get(name, name[0])
         ax.text(x, y + 0.05, glyph, ha='center', va='center', fontsize=10)
+        if retrogrades.get(name):
+            ax.text(x, y - 0.05, '℞', ha='center', va='center', fontsize=6)
         planet_points[name] = (x, y)
 
     # draw aspect lines
@@ -462,13 +466,14 @@ def index():
             )
 
             positions = compute_positions(jd)
+            retrogrades = compute_retrogrades(jd)
             chart_points = compute_chart_points(jd, lat, lon, hsys)
             houses = compute_house_positions(positions, chart_points['cusps'])
             aspects = compute_aspects(positions)
             major_aspects = [a for a in aspects if a['type'] == 'major']
             minor_aspects = [a for a in aspects if a['type'] == 'minor']
             ruler = chart_ruler(chart_points['asc'])
-            chart_img = draw_chart_wheel(positions, chart_points['cusps'], aspects)
+            chart_img = draw_chart_wheel(positions, chart_points['cusps'], aspects, retrogrades)
             formatted_positions = {n: format_longitude(p) for n, p in positions.items()}
             formatted_asc = format_longitude(chart_points['asc'])
             formatted_mc = format_longitude(chart_points['mc'])
@@ -478,6 +483,7 @@ def index():
             return render_template(
                 'chart.html',
                 positions=formatted_positions,
+                retrogrades=retrogrades,
                 houses=houses,
                 major_aspects=major_aspects,
                 minor_aspects=minor_aspects,

@@ -128,6 +128,21 @@ def test_compute_retrogrades():
     assert retro_retro['Mercury']
 
 
+def test_retrograde_indicator_display():
+    client = app.test_client()
+    data = {
+        'date': '2020-06-20',
+        'time': '00:00',
+        'tz_offset': '0',
+        'latitude': '0',
+        'longitude': '0',
+        'house_system': 'P'
+    }
+    resp = client.post('/', data=data)
+    assert resp.status_code == 200
+    assert '℞'.encode('utf-8') in resp.data
+
+
 def test_city_lookup_failure(monkeypatch):
     client = app.test_client()
     data = {
