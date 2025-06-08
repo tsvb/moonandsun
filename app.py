@@ -86,11 +86,64 @@ def compute_house_positions(positions, cusps):
 def compute_chart_points(jd, lat, lon, hsys=b'P'):
     """Return Ascendant, Midheaven and house cusps."""
     cusps, ascmc = swe.houses(jd, lat, lon, hsys)
+    asc = ascmc[0]
+    mc = ascmc[1]
+    vertex = ascmc[3]
+
+    sun_lon = swe.calc_ut(jd, swe.SUN)[0][0]
+    moon_lon = swe.calc_ut(jd, swe.MOON)[0][0]
+    sun_house = house_for(sun_lon, list(cusps))
+    if sun_house >= 7:
+        pof = (asc + moon_lon - sun_lon) % 360
+    else:
+        pof = (asc + sun_lon - moon_lon) % 360
+
     return {
-        'asc': ascmc[0],
-        'mc': ascmc[1],
+        'asc': asc,
+        'mc': mc,
+        'vertex': vertex,
+        'part_of_fortune': pof,
         'cusps': list(cusps),
     }
+
+
+def fetch_chiron_info(jd):
+    """Return (lon, speed) for Chiron using JPL Horizons if SwissEph data missing."""
+    url = "https://ssd.jpl.nasa.gov/api/horizons.api"
+    params = {
+        "format": "text",
+        "COMMAND": "2060",
+        "MAKE_EPHEM": "YES",
+        "EPHEM_TYPE": "V",
+        "CENTER": "500@399",
+        "START_TIME": f"JD{jd}",
+        "STOP_TIME": f"JD{jd + 1e-4}",
+        "STEP_SIZE": "1d",
+        "OUT_UNITS": "AU-D",
+    }
+    resp = requests.get(url, params=params, timeout=10)
+    resp.raise_for_status()
+    lines = resp.text.splitlines()
+    for i, line in enumerate(lines):
+        if line.strip() == "$$SOE" and i + 3 < len(lines):
+            coords_line = lines[i + 2]
+            vel_line = lines[i + 3]
+            import re, math
+            c_match = re.search(
+                r"X\s*=\s*([+-]?\d+\.\d+E[+-]\d+)\s*Y\s*=\s*([+-]?\d+\.\d+E[+-]\d+)\s*Z\s*=\s*([+-]?\d+\.\d+E[+-]\d+)",
+                coords_line,
+            )
+            v_match = re.search(
+                r"VX=\s*([+-]?\d+\.\d+E[+-]\d+)\s*VY=\s*([+-]?\d+\.\d+E[+-]\d+)\s*VZ=\s*([+-]?\d+\.\d+E[+-]\d+)",
+                vel_line,
+            )
+            if c_match and v_match:
+                x, y, _ = [float(v) for v in c_match.groups()]
+                vx, vy, _ = [float(v) for v in v_match.groups()]
+                lon = math.degrees(math.atan2(y, x)) % 360
+                speed = math.degrees((x * vy - y * vx) / (x * x + y * y))
+                return (lon, 0.0, 0.0, speed, 0.0, 0.0)
+    raise RuntimeError("Could not parse Horizons response for Chiron")
 
 def compute_body_info(jd):
     """Return longitude and speed for each major body for the given Julian day."""
@@ -106,10 +159,21 @@ def compute_body_info(jd):
         'Neptune': swe.NEPTUNE,
         'Pluto': swe.PLUTO,
         'Mean Node': swe.MEAN_NODE,
+        'Chiron': swe.CHIRON,
+        'Black Moon Lilith': swe.MEAN_APOG,
     }
     info = {}
     for name, body in planets.items():
-        vals = swe.calc_ut(jd, body)[0]
+        try:
+            if name == 'Black Moon Lilith':
+                vals = swe.calc_ut(jd, body, swe.FLG_MOSEPH | swe.FLG_SPEED)[0]
+            else:
+                vals = swe.calc_ut(jd, body)[0]
+        except swe.Error:
+            if name == 'Chiron':
+                vals = fetch_chiron_info(jd)
+            else:
+                raise
         info[name] = (vals[0], vals[3])
     return info
 
@@ -254,6 +318,8 @@ def index():
             formatted_positions = {n: format_longitude(p) for n, p in positions.items()}
             formatted_asc = format_longitude(chart_points['asc'])
             formatted_mc = format_longitude(chart_points['mc'])
+            formatted_vertex = format_longitude(chart_points['vertex'])
+            formatted_pof = format_longitude(chart_points['part_of_fortune'])
             formatted_cusps = [format_longitude(c) for c in chart_points['cusps']]
             return render_template(
                 'chart.html',
@@ -268,6 +334,8 @@ def index():
                 dt_utc=dt_utc,
                 asc=formatted_asc,
                 mc=formatted_mc,
+                vertex=formatted_vertex,
+                part_of_fortune=formatted_pof,
                 cusps=formatted_cusps,
                 house_system=hsys.decode(),
             )

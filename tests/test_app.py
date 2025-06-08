@@ -53,6 +53,13 @@ def test_index_post_positions():
     assert asc_str in resp.data
     assert cusp1 in resp.data
 
+    assert 'Chiron' in expected
+    assert 'Black Moon Lilith' in expected
+    vertex_str = format_longitude(chart_points['vertex']).replace("'", "&#39;").encode()
+    pof_str = format_longitude(chart_points['part_of_fortune']).replace("'", "&#39;").encode()
+    assert vertex_str in resp.data
+    assert pof_str in resp.data
+
     # Check whole sign houses differ
     data['house_system'] = 'W'
     resp2 = client.post('/', data=data)
