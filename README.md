@@ -88,3 +88,12 @@ Potential frontend upgrades include:
 - **React + FastAPI** for a modern stack.
 - **Flask + HTMX** for lighter enhancements.
 - **Vue.js + Flask API** as a balanced approach.
+
+### Phase 4: Technical Excellence (1-2 weeks)
+
+Focus areas for performance optimization:
+
+- **Caching**: Redis to store computed charts.
+- **Database**: PostgreSQL for chart metadata.
+- **API**: Pagination and filtering for chart lists.
+- **Chart generation**: WebGL-driven interactive wheels.
