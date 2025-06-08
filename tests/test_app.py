@@ -75,6 +75,33 @@ def test_aspects_and_chart_ruler():
     assert chart_ruler(chart_points['asc']) == 'Mars'
 
 
+def test_extended_aspects():
+    jd = swe.julday(2000, 1, 1, 12.0)
+    positions = compute_positions(jd)
+    aspects = compute_aspects(positions)
+
+    assert any(
+        a['planet1'] == 'Mercury' and a['planet2'] == 'Venus' and a['aspect'] == 'Semi-sextile'
+        for a in aspects
+    )
+    assert any(
+        a['planet1'] == 'Saturn' and a['planet2'] == 'Pluto' and a['aspect'] == 'Quincunx'
+        for a in aspects
+    )
+    assert any(
+        a['planet1'] == 'Jupiter' and a['planet2'] == 'Pluto' and a['aspect'] == 'Sesquiquadrate'
+        for a in aspects
+    )
+
+    jd2 = swe.julday(2020, 1, 1, 12.0)
+    pos2 = compute_positions(jd2)
+    aspects2 = compute_aspects(pos2)
+    assert any(
+        a['planet1'] == 'Uranus' and a['planet2'] == 'Neptune' and a['aspect'] == 'Semi-square'
+        for a in aspects2
+    )
+
+
 def test_compute_retrogrades():
     jd_direct = swe.julday(2000, 1, 1, 12.0)
     jd_retro = swe.julday(2020, 6, 20, 0.0)
