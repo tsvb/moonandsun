@@ -20,8 +20,8 @@ The application uses Flask sessions and expects a secret key. Set the
 `SECRET_KEY` environment variable to override the default development key.
 Chart wheel size can be customised by setting `CHART_FIGSIZE` to a comma
 separated width and height (e.g. `7,7`).
-The `CHART_THEME` variable toggles between light and dark colors, and
-`CHART_INTERACTIVE=1` enables an interactive wheel with tooltips.
+The `CHART_THEME` variable toggles between light and dark colors. Setting
+`CHART_INTERACTIVE=1` enables a D3-powered interactive wheel with tooltips.
 
 The web UI supports a dark/light toggle and basic PWA features. A
 service worker caches pages for offline use and a `manifest.json`
