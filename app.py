@@ -74,6 +74,14 @@ HOUSE_SYSTEMS = {
     'O': 'Porphyry',
 }
 
+# IDs for JPL Horizons lookup of additional bodies
+HORIZONS_IDS = {
+    'Ceres': '1',
+    'Pallas': '2',
+    'Juno': '3',
+    'Vesta': '4',
+}
+
 # Directory to store saved chart images and metadata
 CHARTS_DIR = Path('saved_charts')
 CHARTS_DIR.mkdir(exist_ok=True)
@@ -228,7 +236,7 @@ def compute_house_positions(positions, cusps):
 
 
 def compute_chart_points(jd, lat, lon, hsys=b'P'):
-    """Return Ascendant, Midheaven and house cusps."""
+    """Return Ascendant, Midheaven and various Arabic parts."""
     cusps, ascmc = swe.houses(jd, lat, lon, hsys)
     asc = ascmc[0]
     mc = ascmc[1]
@@ -236,27 +244,41 @@ def compute_chart_points(jd, lat, lon, hsys=b'P'):
 
     sun_lon = swe.calc_ut(jd, swe.SUN)[0][0]
     moon_lon = swe.calc_ut(jd, swe.MOON)[0][0]
+    venus_lon = swe.calc_ut(jd, swe.VENUS)[0][0]
+    saturn_lon = swe.calc_ut(jd, swe.SATURN)[0][0]
+    desc = cusps[6]
+
     sun_house = house_for(sun_lon, list(cusps))
     if sun_house >= 7:
         pof = (asc + moon_lon - sun_lon) % 360
+        pos = (asc + sun_lon - moon_lon) % 360
     else:
         pof = (asc + sun_lon - moon_lon) % 360
+        pos = (asc + moon_lon - sun_lon) % 360
+
+    pol = (asc + venus_lon - sun_lon) % 360
+    pom = (asc + desc - venus_lon) % 360
+    pod = (asc + saturn_lon - moon_lon) % 360
 
     return {
         'asc': asc,
         'mc': mc,
         'vertex': vertex,
         'part_of_fortune': pof,
+        'part_of_spirit': pos,
+        'part_of_love': pol,
+        'part_of_marriage': pom,
+        'part_of_death': pod,
         'cusps': list(cusps),
     }
 
 
-def fetch_chiron_info(jd):
-    """Return (lon, speed) for Chiron using JPL Horizons if SwissEph data missing."""
+def fetch_horizons_info(jd, command):
+    """Return (lon, speed) for a body using JPL Horizons."""
     url = "https://ssd.jpl.nasa.gov/api/horizons.api"
     params = {
         "format": "text",
-        "COMMAND": "2060",
+        "COMMAND": command,
         "MAKE_EPHEM": "YES",
         "EPHEM_TYPE": "V",
         "CENTER": "500@399",
@@ -287,10 +309,17 @@ def fetch_chiron_info(jd):
                 lon = math.degrees(math.atan2(y, x)) % 360
                 speed = math.degrees((x * vy - y * vx) / (x * x + y * y))
                 return (lon, 0.0, 0.0, speed, 0.0, 0.0)
-    raise RuntimeError("Could not parse Horizons response for Chiron")
+    raise RuntimeError("Could not parse Horizons response")
 
-def compute_body_info(jd):
-    """Return longitude and speed for each major body for the given Julian day."""
+
+def fetch_chiron_info(jd):
+    return fetch_horizons_info(jd, "2060")
+
+def compute_body_info(jd, node_type: str = 'mean'):
+    """Return longitude and speed for each major body."""
+
+    node_name = 'True Node' if node_type == 'true' else 'Mean Node'
+    node_const = swe.TRUE_NODE if node_type == 'true' else swe.MEAN_NODE
     planets = {
         'Sun': swe.SUN,
         'Moon': swe.MOON,
@@ -302,7 +331,11 @@ def compute_body_info(jd):
         'Uranus': swe.URANUS,
         'Neptune': swe.NEPTUNE,
         'Pluto': swe.PLUTO,
-        'Mean Node': swe.MEAN_NODE,
+        node_name: node_const,
+        'Ceres': swe.CERES,
+        'Pallas': swe.PALLAS,
+        'Juno': swe.JUNO,
+        'Vesta': swe.VESTA,
         'Chiron': swe.CHIRON,
         'Black Moon Lilith': swe.MEAN_APOG,
     }
@@ -316,19 +349,21 @@ def compute_body_info(jd):
         except swe.Error:
             if name == 'Chiron':
                 vals = fetch_chiron_info(jd)
+            elif name in HORIZONS_IDS:
+                vals = fetch_horizons_info(jd, HORIZONS_IDS[name])
             else:
                 raise
         info[name] = (vals[0], vals[3])
     return info
 
-def compute_positions(jd):
+def compute_positions(jd, node_type: str = 'mean'):
     """Return ecliptic longitudes of major bodies for given Julian day."""
-    info = compute_body_info(jd)
+    info = compute_body_info(jd, node_type)
     return {name: vals[0] for name, vals in info.items()}
 
-def compute_retrogrades(jd):
+def compute_retrogrades(jd, node_type: str = 'mean'):
     """Return True for bodies that are retrograde on the given day."""
-    info = compute_body_info(jd)
+    info = compute_body_info(jd, node_type)
     return {name: vals[1] < 0 for name, vals in info.items()}
 
 
@@ -710,6 +745,7 @@ def index():
             lat_str = request.form.get('latitude', '').strip()
             lon_str = request.form.get('longitude', '').strip()
             hsys = request.form.get('house_system', 'P').encode()
+            node_type = request.form.get('node_type', 'mean')
 
             dt_local = datetime.datetime.strptime(
                 f"{date_str} {time_str}", "%Y-%m-%d %H:%M"
@@ -762,8 +798,8 @@ def index():
                 dt_utc.hour + dt_utc.minute / 60.0 + dt_utc.second / 3600.0,
             )
 
-            positions = compute_positions(jd)
-            retrogrades = compute_retrogrades(jd)
+            positions = compute_positions(jd, node_type)
+            retrogrades = compute_retrogrades(jd, node_type)
             chart_points = compute_chart_points(jd, lat, lon, hsys)
             houses = compute_house_positions(positions, chart_points['cusps'])
             aspects = compute_aspects(positions)
@@ -815,6 +851,7 @@ def index():
                 part_of_fortune=formatted_pof,
                 cusps=formatted_cusps,
                 house_system=hsys.decode(),
+                node_type=node_type,
                 house_systems=HOUSE_SYSTEMS,
             )
         except Exception as exc:
@@ -828,6 +865,7 @@ def index():
                 lat_value=request.form.get('latitude', ''),
                 lon_value=request.form.get('longitude', ''),
                 house_system_value=request.form.get('house_system', 'P'),
+                node_type=request.form.get('node_type', 'mean'),
                 house_systems=HOUSE_SYSTEMS,
             )
     return render_template(
@@ -839,6 +877,7 @@ def index():
         lat_value='',
         lon_value='',
         house_system_value='P',
+        node_type='mean',
         house_systems=HOUSE_SYSTEMS,
     )
 
@@ -853,6 +892,7 @@ def save_chart():
 
     birth_dt = request.form.get('birth_dt')
     house_system = request.form.get('house_system')
+    node_type = request.form.get('node_type', 'mean')
     lat = request.form.get('latitude')
     lon = request.form.get('longitude')
 
@@ -875,6 +915,7 @@ def save_chart():
     metadata = {
         'birth_dt': birth_dt,
         'house_system': house_system,
+        'node_type': node_type,
         'latitude': lat,
         'longitude': lon,
     }
@@ -944,6 +985,7 @@ def edit_chart(filename):
         lat_value=md.get('latitude', ''),
         lon_value=md.get('longitude', ''),
         house_system_value=md.get('house_system', 'P'),
+        node_type=md.get('node_type', 'mean'),
         house_systems=HOUSE_SYSTEMS,
     )
 

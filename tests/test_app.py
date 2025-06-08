@@ -246,3 +246,22 @@ def test_yod_and_stellium_detection():
     assert ('Jupiter', 'Mars', 'Mercury') in patterns['yods']
 
 
+def test_big_four_asteroids_and_parts():
+    jd = swe.julday(2000, 1, 1, 12.0)
+    positions = compute_positions(jd)
+    for name in ['Ceres', 'Pallas', 'Juno', 'Vesta']:
+        assert name in positions
+    points = compute_chart_points(jd, 0, 0, b'P')
+    for key in ['part_of_spirit', 'part_of_love', 'part_of_marriage', 'part_of_death']:
+        assert key in points
+
+
+def test_true_node_option():
+    jd = swe.julday(2000, 1, 1, 12.0)
+    mean_pos = compute_positions(jd, 'mean')
+    true_pos = compute_positions(jd, 'true')
+    assert 'Mean Node' in mean_pos
+    assert 'True Node' in true_pos
+    assert mean_pos['Mean Node'] != true_pos['True Node']
+
+
