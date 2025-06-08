@@ -1,6 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 import sys
 from pathlib import Path
+from glob import glob
 
 block_cipher = None
 
@@ -8,13 +9,34 @@ block_cipher = None
 app = 'app.py'
 
 
-a = Analysis([
-    app,
-],
+added_files = [
+    ('templates/*.html', 'templates'),
+    ('static/*', 'static'),
+    ('LICENSE', '.'),
+]
+
+sefstars = next(
+    (
+        p
+        for p in Path('venv').glob(
+            'lib/python*/site-packages/pyswisseph/sweph/sefstars.txt'
+        )
+    ),
+    None,
+)
+if sefstars:
+    added_files.append((str(sefstars), 'sweph'))
+
+
+a = Analysis(
+    [app],
     pathex=[],
     binaries=[],
-    datas=[('templates/*.html', 'templates'), ('LICENSE', '.')],
-    hiddenimports=[],
+    datas=added_files,
+    hiddenimports=[
+        'pyswisseph',
+        'matplotlib.backends.backend_tkagg',
+    ],
     hookspath=[],
     runtime_hooks=[],
     excludes=[],
@@ -29,7 +51,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='natal_chart',
+    name='NatalChart',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -45,5 +67,18 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='natal_chart'
+    name='NatalChart'
 )
+
+# For Mac, create app bundle
+if sys.platform == 'darwin':
+    app = BUNDLE(
+        coll,
+        name='NatalChart.app',
+        icon='icons/icon.icns',
+        bundle_identifier='com.yourname.natalchart',
+        info_plist={
+            'NSHighResolutionCapable': 'True',
+            'CFBundleShortVersionString': '1.0.0',
+        },
+    )

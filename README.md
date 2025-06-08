@@ -59,7 +59,7 @@ automatically when the application starts.
 
 ## Packaging
 
-You can create standalone executables for Windows, macOS and Linux using [PyInstaller](https://www.pyinstaller.org/). The repository includes a `natal_chart.spec` file that bundles the templates and license.
+You can create standalone executables for Windows, macOS and Linux using [PyInstaller](https://www.pyinstaller.org/). The `natal_chart.spec` file now collects templates, static assets and the Swiss Ephemeris star data when available. It also specifies the matplotlib backend and creates a macOS bundle automatically.
 Binary icon assets are not included in the repository (some tools cannot display them in diffs). Provide your own icon files inside the `icons/` directory (e.g. `icon.ico` for Windows and `icon.icns` for macOS) if you want a custom installer graphic.
 
 Install PyInstaller and run it with the spec file:
