@@ -3,3 +3,4 @@ pyswisseph
 requests
 timezonefinder
 matplotlib
+mpld3
