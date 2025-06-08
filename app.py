@@ -6,6 +6,7 @@ from timezonefinder import TimezoneFinder
 from zoneinfo import ZoneInfo
 import io
 import base64
+import mpld3
 import math
 import matplotlib.pyplot as plt
 import os
@@ -98,6 +99,37 @@ try:
         raise ValueError
 except Exception:
     CHART_FIGSIZE = (6.0, 6.0)
+
+# theme customization via CHART_THEME environment variable
+CHART_THEME = os.environ.get('CHART_THEME', 'light').lower()
+THEMES = {
+    'light': {
+        'bg': 'white',
+        'fg': 'black',
+        'aspect_colors': {
+            'Conjunction': 'green',
+            'Opposition': 'red',
+            'Square': 'red',
+            'Trine': 'green',
+            'Sextile': 'blue',
+        },
+    },
+    'dark': {
+        'bg': '#222',
+        'fg': 'white',
+        'aspect_colors': {
+            'Conjunction': '#0f0',
+            'Opposition': '#f55',
+            'Square': '#f55',
+            'Trine': '#0f0',
+            'Sextile': '#59f',
+        },
+    },
+}
+THEME = THEMES.get(CHART_THEME, THEMES['light'])
+
+# enable interactive chart wheel output
+CHART_INTERACTIVE = os.environ.get('CHART_INTERACTIVE', '0') == '1'
 
 
 def cleanup_saved_charts(max_age_days: int = 30) -> None:
@@ -611,8 +643,9 @@ def filter_aspects_for_wheel(aspects, max_minor=2):
     return major + minor[:max_minor]
 
 
-def draw_chart_wheel(positions, cusps, aspects=None, retrogrades=None, asc=None, mc=None):
-    """Return base64-encoded PNG of an improved chart wheel.
+def draw_chart_wheel(positions, cusps, aspects=None, retrogrades=None, asc=None,
+                     mc=None, interactive=False):
+    """Return a chart wheel as base64 PNG or interactive HTML.
 
     The ascendant and midheaven can be highlighted if provided."""
     if aspects is None:
@@ -622,12 +655,12 @@ def draw_chart_wheel(positions, cusps, aspects=None, retrogrades=None, asc=None,
 
     fig = None
     try:
-        fig, ax = plt.subplots(figsize=CHART_FIGSIZE)
+        fig, ax = plt.subplots(figsize=CHART_FIGSIZE, facecolor=THEME['bg'])
         ax.set_aspect('equal')
         ax.axis('off')
 
         # outer circle for zodiac
-        outer = plt.Circle((0, 0), 1, fill=False, lw=1, color='black')
+        outer = plt.Circle((0, 0), 1, fill=False, lw=1, color=THEME['fg'])
         ax.add_artist(outer)
 
         # zodiac glyphs
@@ -636,14 +669,16 @@ def draw_chart_wheel(positions, cusps, aspects=None, retrogrades=None, asc=None,
             theta = math.radians(90 - deg)
             x = 1.08 * math.cos(theta)
             y = 1.08 * math.sin(theta)
-            ax.text(x, y, glyph, ha='center', va='center', fontsize=12)
+            ax.text(x, y, glyph, ha='center', va='center', fontsize=12,
+                    color=THEME['fg'])
 
         # draw house cusps and numbers
         for i, cusp in enumerate(cusps):
             theta = math.radians(90 - cusp)
             x = math.cos(theta)
             y = math.sin(theta)
-            ax.plot([0, x], [0, y], color='black', linewidth=0.5)
+            width = 1.0 if i in (0, 3, 6, 9) else 0.5
+            ax.plot([0, x], [0, y], color=THEME['fg'], linewidth=width)
 
             next_cusp = cusps[(i + 1) % 12]
             diff = (next_cusp - cusp) % 360
@@ -651,7 +686,8 @@ def draw_chart_wheel(positions, cusps, aspects=None, retrogrades=None, asc=None,
             mtheta = math.radians(90 - mid_deg)
             mx = 0.5 * math.cos(mtheta)
             my = 0.5 * math.sin(mtheta)
-            ax.text(mx, my, str(i + 1), ha='center', va='center', fontsize=8)
+            ax.text(mx, my, str(i + 1), ha='center', va='center', fontsize=8,
+                    color=THEME['fg'])
 
         # highlight ascendant and midheaven if supplied
         if asc is not None:
@@ -671,36 +707,49 @@ def draw_chart_wheel(positions, cusps, aspects=None, retrogrades=None, asc=None,
 
         # track overlapping planets for spacing. group planets by degree and
         # distribute them along a small arc so glyphs do not overlap.
-        buckets = {}
-        for name, lon in positions.items():
-            key = round(lon)  # bucket planets within 1 degree
-            buckets.setdefault(key, []).append((name, lon))
+        # cluster planets that are very close in longitude
+        items = sorted(positions.items(), key=lambda t: t[1])
+        groups = []
+        group = [items[0]] if items else []
+        for name, lon in items[1:]:
+            if lon - group[-1][1] <= 1.0:
+                group.append((name, lon))
+            else:
+                groups.append(group)
+                group = [(name, lon)]
+        if group:
+            groups.append(group)
+        if len(groups) > 1 and (groups[0][0][1] + 360 - groups[-1][-1][1]) <= 1.0:
+            groups[0] = groups[-1] + groups[0]
+            groups.pop()
 
         planet_points = {}
-        for items in buckets.values():
-            count = len(items)
-            items.sort(key=lambda t: t[1])
-            for i, (name, lon) in enumerate(items):
-                angle_offset = (i - (count - 1) / 2) * 0.5  # degrees
+        scatter_x = []
+        scatter_y = []
+        labels = []
+        for g in groups:
+            count = len(g)
+            g.sort(key=lambda t: t[1])
+            for i, (name, lon) in enumerate(g):
+                angle_offset = (i - (count - 1) / 2) * 0.5
                 theta = math.radians(90 - (lon + angle_offset))
                 r = 0.8 - 0.05 * i
                 x = r * math.cos(theta)
                 y = r * math.sin(theta)
-                ax.plot(x, y, 'o', color='black', markersize=5)
+                ax.plot(x, y, 'o', color=THEME['fg'], markersize=5)
                 glyph = PLANET_GLYPHS.get(name, name[0])
-                ax.text(x, y + 0.05, glyph, ha='center', va='center', fontsize=10)
+                ax.text(x, y + 0.05, glyph, ha='center', va='center',
+                        fontsize=10, color=THEME['fg'])
                 if retrogrades.get(name):
-                    ax.text(x, y - 0.05, '℞', ha='center', va='center', fontsize=6)
+                    ax.text(x, y - 0.05, '℞', ha='center', va='center',
+                            fontsize=6, color=THEME['fg'])
                 planet_points[name] = (x, y)
+                scatter_x.append(x)
+                scatter_y.append(y)
+                labels.append(f"{name} {format_longitude(positions[name])}")
 
         # draw aspect lines
-        aspect_colors = {
-            'Conjunction': 'green',
-            'Opposition': 'red',
-            'Square': 'red',
-            'Trine': 'green',
-            'Sextile': 'blue',
-        }
+        aspect_colors = THEME['aspect_colors']
         for asp in aspects:
             p1 = asp['planet1']
             p2 = asp['planet2']
@@ -709,10 +758,18 @@ def draw_chart_wheel(positions, cusps, aspects=None, retrogrades=None, asc=None,
             x1, y1 = planet_points[p1]
             x2, y2 = planet_points[p2]
             color = aspect_colors.get(asp['aspect'], 'gray')
-            ax.plot([x1, x2], [y1, y2], color=color, linewidth=0.7)
+            max_orb = ASPECTS_INFO.get(asp['aspect'], {}).get('orb', 5)
+            width = 0.5 + max(0, (max_orb - asp['orb']) / max_orb) * 1.5
+            ax.plot([x1, x2], [y1, y2], color=color, linewidth=width)
 
         ax.set_xlim(-1.2, 1.2)
         ax.set_ylim(-1.2, 1.2)
+
+        if interactive:
+            scatter = ax.scatter(scatter_x, scatter_y, s=20, alpha=0)
+            tooltip = mpld3.plugins.PointLabelTooltip(scatter, labels)
+            mpld3.plugins.connect(fig, tooltip, mpld3.plugins.Zoom())
+            return mpld3.fig_to_html(fig)
 
         buf = io.BytesIO()
         fig.tight_layout()
@@ -822,6 +879,17 @@ def index():
                 asc=chart_points['asc'],
                 mc=chart_points['mc'],
             )
+            chart_html = None
+            if CHART_INTERACTIVE:
+                chart_html = draw_chart_wheel(
+                    positions,
+                    chart_points['cusps'],
+                    wheel_aspects,
+                    retrogrades,
+                    asc=chart_points['asc'],
+                    mc=chart_points['mc'],
+                    interactive=True,
+                )
             formatted_positions = {n: format_longitude(p) for n, p in positions.items()}
             formatted_asc = format_longitude(chart_points['asc'])
             formatted_mc = format_longitude(chart_points['mc'])
@@ -841,6 +909,8 @@ def index():
                 chart_ruler=ruler,
                 patterns=patterns,
                 chart_img=chart_img,
+                chart_html=chart_html,
+                interactive=CHART_INTERACTIVE,
                 lat=lat,
                 lon=lon,
                 dt=dt,

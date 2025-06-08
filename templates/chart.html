@@ -8,7 +8,11 @@
 </head>
 <body>
   <h1>Natal Chart</h1>
-  <img src="data:image/png;base64,{{ chart_img }}" alt="Chart Wheel">
+  {% if interactive %}
+  <div id="chart-container">{{ chart_html|safe }}</div>
+  {% else %}
+  <img class="chart-img" src="data:image/png;base64,{{ chart_img }}" alt="Chart Wheel">
+  {% endif %}
   <button id="download-btn" type="button">Download PNG</button>
   <form action="{{ url_for('save_chart') }}" method="post" style="margin-top:10px;">
     <input type="hidden" name="chart_img" value="{{ chart_img }}">
