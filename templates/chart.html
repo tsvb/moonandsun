@@ -9,20 +9,24 @@
   <p>Converted to UTC: {{ dt_utc }}</p>
   <p>Coordinates: {{ lat }}, {{ lon }}</p>
   <table border="1">
-    <tr><th>Body</th><th>Longitude (deg)</th></tr>
+    <tr><th>Body</th><th>Position</th><th>House</th></tr>
     {% for name, position in positions.items() %}
-    <tr><td>{{ name }}</td><td>{{ '%.2f'|format(position) }}</td></tr>
+    <tr>
+      <td>{{ name }}</td>
+      <td>{{ position }}</td>
+      <td>{{ houses[name] }}</td>
+    </tr>
     {% endfor %}
   </table>
   <h2>Chart Points</h2>
-  <p>Ascendant: {{ '%.2f'|format(asc) }}</p>
-  <p>Midheaven: {{ '%.2f'|format(mc) }}</p>
+  <p>Ascendant: {{ asc }}</p>
+  <p>Midheaven: {{ mc }}</p>
 
   <h2>House Cusps ({{ house_system }})</h2>
   <table border="1">
-    <tr><th>House</th><th>Cusp Longitude (deg)</th></tr>
+    <tr><th>House</th><th>Cusp Longitude</th></tr>
     {% for cusp in cusps %}
-    <tr><td>{{ loop.index }}</td><td>{{ '%.2f'|format(cusp) }}</td></tr>
+    <tr><td>{{ loop.index }}</td><td>{{ cusp }}</td></tr>
     {% endfor %}
   </table>
   <a href="{{ url_for('index') }}">Back</a>
