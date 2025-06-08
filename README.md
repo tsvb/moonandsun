@@ -1,7 +1,7 @@
 # Moon and Sun Natal Chart
 
 This project is a simple Flask web application that generates planetary positions for a natal chart using the [Swiss Ephemeris](https://www.astro.com/swisseph/).
-The application now also calculates major aspects between planets with their orb strength and identifies the chart ruler based on the ascendant sign.
+The application now also calculates major aspects between planets with their orb strength, identifies the chart ruler based on the ascendant sign and draws a chart wheel illustrating the houses and planetary locations.
 
 ## Setup
 
@@ -14,6 +14,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 pip install -r requirements-dev.txt  # for running tests
 ```
+The `requirements.txt` file now includes `matplotlib` which is used to draw the chart wheel.
 
 ## Running
 
