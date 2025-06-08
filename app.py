@@ -8,6 +8,7 @@ import io
 import base64
 import math
 import matplotlib.pyplot as plt
+import os
 
 ZODIAC_SIGNS = [
     'Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo',
@@ -171,7 +172,7 @@ def chart_ruler(asc_longitude):
     return SIGN_RULERS.get(sign)
 
 app = Flask(__name__)
-app.secret_key = 'development-secret-key'
+app.secret_key = os.environ.get("SECRET_KEY", "development-secret-key")
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
