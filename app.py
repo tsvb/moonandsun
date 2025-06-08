@@ -64,6 +64,42 @@ CHARTS_INDEX = CHARTS_DIR / 'charts.json'
 if not CHARTS_INDEX.exists():
     CHARTS_INDEX.write_text('[]')
 
+# Chart wheel size can be adjusted via the CHART_FIGSIZE environment variable
+try:
+    CHART_FIGSIZE = tuple(
+        float(x) for x in os.environ.get('CHART_FIGSIZE', '6,6').split(',')[:2]
+    )
+    if len(CHART_FIGSIZE) != 2:
+        raise ValueError
+except Exception:
+    CHART_FIGSIZE = (6.0, 6.0)
+
+
+def cleanup_saved_charts(max_age_days: int = 30) -> None:
+    """Remove PNG files not referenced in the index or older than max_age_days."""
+    now = time.time()
+    try:
+        charts = load_charts()
+        valid = {c.get('file') for c in charts}
+    except Exception:
+        valid = set()
+    for path in CHARTS_DIR.glob('*.png'):
+        age = now - path.stat().st_mtime
+        if path.name not in valid or age > max_age_days * 86400:
+            try:
+                path.unlink()
+            except OSError:
+                pass
+    # prune entries that point to missing files
+    try:
+        charts = [c for c in charts if (CHARTS_DIR / c.get('file', '')).exists()]
+        save_charts(charts)
+    except Exception:
+        pass
+
+# Clean up any stale chart images on startup
+cleanup_saved_charts()
+
 # Aspect configuration: aspect angle and maximum orb
 ASPECTS_INFO = {
     'Conjunction': {
@@ -340,103 +376,110 @@ def draw_chart_wheel(positions, cusps, aspects=None, retrogrades=None, asc=None,
     if retrogrades is None:
         retrogrades = {}
 
-    fig, ax = plt.subplots(figsize=(6, 6))
-    ax.set_aspect('equal')
-    ax.axis('off')
+    fig = None
+    try:
+        fig, ax = plt.subplots(figsize=CHART_FIGSIZE)
+        ax.set_aspect('equal')
+        ax.axis('off')
 
-    # outer circle for zodiac
-    outer = plt.Circle((0, 0), 1, fill=False, lw=1, color='black')
-    ax.add_artist(outer)
+        # outer circle for zodiac
+        outer = plt.Circle((0, 0), 1, fill=False, lw=1, color='black')
+        ax.add_artist(outer)
 
-    # zodiac glyphs
-    for i, glyph in enumerate(ZODIAC_GLYPHS):
-        deg = i * 30 + 15
-        theta = math.radians(90 - deg)
-        x = 1.08 * math.cos(theta)
-        y = 1.08 * math.sin(theta)
-        ax.text(x, y, glyph, ha='center', va='center', fontsize=12)
+        # zodiac glyphs
+        for i, glyph in enumerate(ZODIAC_GLYPHS):
+            deg = i * 30 + 15
+            theta = math.radians(90 - deg)
+            x = 1.08 * math.cos(theta)
+            y = 1.08 * math.sin(theta)
+            ax.text(x, y, glyph, ha='center', va='center', fontsize=12)
 
-    # draw house cusps and numbers
-    for i, cusp in enumerate(cusps):
-        theta = math.radians(90 - cusp)
-        x = math.cos(theta)
-        y = math.sin(theta)
-        ax.plot([0, x], [0, y], color='black', linewidth=0.5)
+        # draw house cusps and numbers
+        for i, cusp in enumerate(cusps):
+            theta = math.radians(90 - cusp)
+            x = math.cos(theta)
+            y = math.sin(theta)
+            ax.plot([0, x], [0, y], color='black', linewidth=0.5)
 
-        next_cusp = cusps[(i + 1) % 12]
-        diff = (next_cusp - cusp) % 360
-        mid_deg = (cusp + diff / 2) % 360
-        mtheta = math.radians(90 - mid_deg)
-        mx = 0.5 * math.cos(mtheta)
-        my = 0.5 * math.sin(mtheta)
-        ax.text(mx, my, str(i + 1), ha='center', va='center', fontsize=8)
+            next_cusp = cusps[(i + 1) % 12]
+            diff = (next_cusp - cusp) % 360
+            mid_deg = (cusp + diff / 2) % 360
+            mtheta = math.radians(90 - mid_deg)
+            mx = 0.5 * math.cos(mtheta)
+            my = 0.5 * math.sin(mtheta)
+            ax.text(mx, my, str(i + 1), ha='center', va='center', fontsize=8)
 
-    # highlight ascendant and midheaven if supplied
-    if asc is not None:
-        theta = math.radians(90 - asc)
-        x = math.cos(theta)
-        y = math.sin(theta)
-        ax.plot([0, x], [0, y], color='red', linewidth=1.5)
-        ax.text(1.15 * math.cos(theta), 1.15 * math.sin(theta), 'ASC',
-                ha='center', va='center', fontsize=8, color='red')
-    if mc is not None:
-        theta = math.radians(90 - mc)
-        x = math.cos(theta)
-        y = math.sin(theta)
-        ax.plot([0, x], [0, y], color='blue', linewidth=1.5)
-        ax.text(1.15 * math.cos(theta), 1.15 * math.sin(theta), 'MC',
-                ha='center', va='center', fontsize=8, color='blue')
+        # highlight ascendant and midheaven if supplied
+        if asc is not None:
+            theta = math.radians(90 - asc)
+            x = math.cos(theta)
+            y = math.sin(theta)
+            ax.plot([0, x], [0, y], color='red', linewidth=1.5)
+            ax.text(1.15 * math.cos(theta), 1.15 * math.sin(theta), 'ASC',
+                    ha='center', va='center', fontsize=8, color='red')
+        if mc is not None:
+            theta = math.radians(90 - mc)
+            x = math.cos(theta)
+            y = math.sin(theta)
+            ax.plot([0, x], [0, y], color='blue', linewidth=1.5)
+            ax.text(1.15 * math.cos(theta), 1.15 * math.sin(theta), 'MC',
+                    ha='center', va='center', fontsize=8, color='blue')
 
-    # track overlapping planets for spacing. group planets by degree and
-    # distribute them along a small arc so glyphs do not overlap.
-    buckets = {}
-    for name, lon in positions.items():
-        key = round(lon)  # bucket planets within 1 degree
-        buckets.setdefault(key, []).append((name, lon))
+        # track overlapping planets for spacing. group planets by degree and
+        # distribute them along a small arc so glyphs do not overlap.
+        buckets = {}
+        for name, lon in positions.items():
+            key = round(lon)  # bucket planets within 1 degree
+            buckets.setdefault(key, []).append((name, lon))
 
-    planet_points = {}
-    for items in buckets.values():
-        count = len(items)
-        items.sort(key=lambda t: t[1])
-        for i, (name, lon) in enumerate(items):
-            angle_offset = (i - (count - 1) / 2) * 0.5  # degrees
-            theta = math.radians(90 - (lon + angle_offset))
-            r = 0.8 - 0.05 * i
-            x = r * math.cos(theta)
-            y = r * math.sin(theta)
-            ax.plot(x, y, 'o', color='black', markersize=5)
-            glyph = PLANET_GLYPHS.get(name, name[0])
-            ax.text(x, y + 0.05, glyph, ha='center', va='center', fontsize=10)
-            if retrogrades.get(name):
-                ax.text(x, y - 0.05, '℞', ha='center', va='center', fontsize=6)
-            planet_points[name] = (x, y)
+        planet_points = {}
+        for items in buckets.values():
+            count = len(items)
+            items.sort(key=lambda t: t[1])
+            for i, (name, lon) in enumerate(items):
+                angle_offset = (i - (count - 1) / 2) * 0.5  # degrees
+                theta = math.radians(90 - (lon + angle_offset))
+                r = 0.8 - 0.05 * i
+                x = r * math.cos(theta)
+                y = r * math.sin(theta)
+                ax.plot(x, y, 'o', color='black', markersize=5)
+                glyph = PLANET_GLYPHS.get(name, name[0])
+                ax.text(x, y + 0.05, glyph, ha='center', va='center', fontsize=10)
+                if retrogrades.get(name):
+                    ax.text(x, y - 0.05, '℞', ha='center', va='center', fontsize=6)
+                planet_points[name] = (x, y)
 
-    # draw aspect lines
-    aspect_colors = {
-        'Conjunction': 'green',
-        'Opposition': 'red',
-        'Square': 'red',
-        'Trine': 'green',
-        'Sextile': 'blue',
-    }
-    for asp in aspects:
-        p1 = asp['planet1']
-        p2 = asp['planet2']
-        if p1 not in planet_points or p2 not in planet_points:
-            continue
-        x1, y1 = planet_points[p1]
-        x2, y2 = planet_points[p2]
-        color = aspect_colors.get(asp['aspect'], 'gray')
-        ax.plot([x1, x2], [y1, y2], color=color, linewidth=0.7)
+        # draw aspect lines
+        aspect_colors = {
+            'Conjunction': 'green',
+            'Opposition': 'red',
+            'Square': 'red',
+            'Trine': 'green',
+            'Sextile': 'blue',
+        }
+        for asp in aspects:
+            p1 = asp['planet1']
+            p2 = asp['planet2']
+            if p1 not in planet_points or p2 not in planet_points:
+                continue
+            x1, y1 = planet_points[p1]
+            x2, y2 = planet_points[p2]
+            color = aspect_colors.get(asp['aspect'], 'gray')
+            ax.plot([x1, x2], [y1, y2], color=color, linewidth=0.7)
 
-    ax.set_xlim(-1.2, 1.2)
-    ax.set_ylim(-1.2, 1.2)
+        ax.set_xlim(-1.2, 1.2)
+        ax.set_ylim(-1.2, 1.2)
 
-    buf = io.BytesIO()
-    fig.tight_layout()
-    plt.savefig(buf, format='png')
-    plt.close(fig)
-    return base64.b64encode(buf.getvalue()).decode()
+        buf = io.BytesIO()
+        fig.tight_layout()
+        plt.savefig(buf, format='png')
+        encoded = base64.b64encode(buf.getvalue()).decode()
+        return encoded
+    except Exception as exc:
+        raise RuntimeError('Error generating chart wheel') from exc
+    finally:
+        if fig:
+            plt.close(fig)
 
 
 def chart_ruler(asc_longitude):
