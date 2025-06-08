@@ -102,3 +102,4 @@ def test_city_lookup_failure(monkeypatch):
     resp = client.post('/', data=data)
     assert resp.status_code == 200
     assert b'City lookup failed' in resp.data
+
