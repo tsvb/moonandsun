@@ -187,12 +187,17 @@ def index():
 
             # Resolve coordinates from city name if provided
             if city and (not lat_str or not lon_str):
-                resp = requests.get(
-                    'https://nominatim.openstreetmap.org/search',
-                    params={'q': city, 'format': 'json', 'limit': 1},
-                    headers={'User-Agent': 'moonandsun'}
-                )
-                resp.raise_for_status()
+                try:
+                    resp = requests.get(
+                        'https://nominatim.openstreetmap.org/search',
+                        params={'q': city, 'format': 'json', 'limit': 1},
+                        headers={'User-Agent': 'moonandsun'}
+                    )
+                    resp.raise_for_status()
+                except requests.RequestException:
+                    flash('City lookup failed')
+                    return render_template('index.html')
+
                 data = resp.json()
                 if not data:
                     raise ValueError('City not found')
