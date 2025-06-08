@@ -16,6 +16,9 @@ pip install -r requirements-dev.txt  # for running tests
 ```
 The `requirements.txt` file now includes `matplotlib` which is used to draw the chart wheel.
 
+The application uses Flask sessions and expects a secret key. Set the
+`SECRET_KEY` environment variable to override the default development key.
+
 ## Running
 
 Run the Flask app with:

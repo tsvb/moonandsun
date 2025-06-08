@@ -8,6 +8,7 @@ import io
 import base64
 import math
 import matplotlib.pyplot as plt
+import os
 
 ZODIAC_SIGNS = [
     'Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo',
@@ -86,8 +87,8 @@ def compute_chart_points(jd, lat, lon, hsys=b'P'):
         'cusps': list(cusps),
     }
 
-def compute_positions(jd):
-    """Return ecliptic longitudes of major bodies for given Julian day."""
+def compute_body_info(jd):
+    """Return longitude and speed for each major body for the given Julian day."""
     planets = {
         'Sun': swe.SUN,
         'Moon': swe.MOON,
@@ -101,11 +102,21 @@ def compute_positions(jd):
         'Pluto': swe.PLUTO,
         'Mean Node': swe.MEAN_NODE,
     }
-    positions = {}
+    info = {}
     for name, body in planets.items():
-        lon_lat_dist = swe.calc_ut(jd, body)[0]
-        positions[name] = lon_lat_dist[0]
-    return positions
+        vals = swe.calc_ut(jd, body)[0]
+        info[name] = (vals[0], vals[3])
+    return info
+
+def compute_positions(jd):
+    """Return ecliptic longitudes of major bodies for given Julian day."""
+    info = compute_body_info(jd)
+    return {name: vals[0] for name, vals in info.items()}
+
+def compute_retrogrades(jd):
+    """Return True for bodies that are retrograde on the given day."""
+    info = compute_body_info(jd)
+    return {name: vals[1] < 0 for name, vals in info.items()}
 
 
 def angular_distance(lon1, lon2):
@@ -171,7 +182,7 @@ def chart_ruler(asc_longitude):
     return SIGN_RULERS.get(sign)
 
 app = Flask(__name__)
-app.secret_key = 'development-secret-key'
+app.secret_key = os.environ.get("SECRET_KEY", "development-secret-key")
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -187,12 +198,17 @@ def index():
 
             # Resolve coordinates from city name if provided
             if city and (not lat_str or not lon_str):
-                resp = requests.get(
-                    'https://nominatim.openstreetmap.org/search',
-                    params={'q': city, 'format': 'json', 'limit': 1},
-                    headers={'User-Agent': 'moonandsun'}
-                )
-                resp.raise_for_status()
+                try:
+                    resp = requests.get(
+                        'https://nominatim.openstreetmap.org/search',
+                        params={'q': city, 'format': 'json', 'limit': 1},
+                        headers={'User-Agent': 'moonandsun'}
+                    )
+                    resp.raise_for_status()
+                except requests.RequestException:
+                    flash('City lookup failed')
+                    return render_template('index.html')
+
                 data = resp.json()
                 if not data:
                     raise ValueError('City not found')
