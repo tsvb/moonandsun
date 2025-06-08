@@ -64,3 +64,11 @@ pyinstaller natal_chart.spec
 ```
 
 The resulting executable will be placed in the `dist/` directory. If you added `icons/icon.ico` before building on Windows (or `icon.icns` on macOS) the installer will include it automatically.
+
+## Future Work
+
+Next development steps focus on improving the user interface.
+Potential frontend upgrades include:
+- **React + FastAPI** for a modern stack.
+- **Flask + HTMX** for lighter enhancements.
+- **Vue.js + Flask API** as a balanced approach.
