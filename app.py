@@ -3,6 +3,15 @@ import swisseph as swe
 import datetime
 
 
+def compute_chart_points(jd, lat, lon, hsys=b'P'):
+    """Return Ascendant, Midheaven and house cusps."""
+    cusps, ascmc = swe.houses(jd, lat, lon, hsys)
+    return {
+        'asc': ascmc[0],
+        'mc': ascmc[1],
+        'cusps': list(cusps),
+    }
+
 def compute_positions(jd):
     """Return ecliptic longitudes of major bodies for given Julian day."""
     planets = {
@@ -34,6 +43,7 @@ def index():
         tz_offset = float(request.form['tz_offset'])
         lat = float(request.form['latitude'])
         lon = float(request.form['longitude'])
+        hsys = request.form.get('house_system', 'P').encode()
 
         dt = datetime.datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
         dt_utc = dt - datetime.timedelta(hours=tz_offset)
@@ -45,8 +55,13 @@ def index():
         )
 
         positions = compute_positions(jd)
+        chart_points = compute_chart_points(jd, lat, lon, hsys)
         return render_template('chart.html', positions=positions,
-                               lat=lat, lon=lon, dt=dt, dt_utc=dt_utc)
+                               lat=lat, lon=lon, dt=dt, dt_utc=dt_utc,
+                               asc=chart_points['asc'],
+                               mc=chart_points['mc'],
+                               cusps=chart_points['cusps'],
+                               house_system=hsys.decode())
     return render_template('index.html')
 
 if __name__ == '__main__':
