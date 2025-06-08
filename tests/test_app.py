@@ -1,6 +1,7 @@
 import sys
 from pathlib import Path
 import swisseph as swe
+import requests
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 from app import (
@@ -81,5 +82,26 @@ def test_compute_retrogrades():
     retro_retro = compute_retrogrades(jd_retro)
     assert not retro_direct['Mercury']
     assert retro_retro['Mercury']
+
+
+def test_city_lookup_failure(monkeypatch):
+    client = app.test_client()
+    data = {
+        'date': '2000-01-01',
+        'time': '12:00',
+        'tz_offset': '0',
+        'city': 'Nowhere',
+        'latitude': '',
+        'longitude': '',
+        'house_system': 'P'
+    }
+
+    def mock_get(*args, **kwargs):
+        raise requests.RequestException()
+
+    monkeypatch.setattr('app.requests.get', mock_get)
+    resp = client.post('/', data=data)
+    assert resp.status_code == 200
+    assert b'City lookup failed' in resp.data
 
 
