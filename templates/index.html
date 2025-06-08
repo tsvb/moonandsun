@@ -2,20 +2,32 @@
 <html>
 <head>
   <title>Natal Chart Generator</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
   <h1>Generate your natal chart</h1>
+  {% with messages = get_flashed_messages() %}
+    {% if messages %}
+      <ul class="flashes">
+      {% for message in messages %}
+        <li>{{ message }}</li>
+      {% endfor %}
+      </ul>
+    {% endif %}
+  {% endwith %}
   <form method="post">
     <label>Date of birth:</label>
     <input type="date" name="date" required><br>
     <label>Time of birth:</label>
     <input type="time" name="time" required><br>
-    <label>Timezone offset from UTC (e.g., -5 for EST):</label>
-    <input type="number" name="tz_offset" step="any" required><br>
+    <label>City (optional):</label>
+    <input type="text" name="city"><br>
+    <label>Timezone offset from UTC (e.g., -5 for EST, leave blank for auto):</label>
+    <input type="number" name="tz_offset" step="any"><br>
     <label>Latitude:</label>
-    <input type="number" name="latitude" step="any" required><br>
+    <input type="number" name="latitude" step="any"><br>
     <label>Longitude:</label>
-    <input type="number" name="longitude" step="any" required><br>
+    <input type="number" name="longitude" step="any"><br>
     <label>House system:</label>
     <select name="house_system">
       <option value="P">Placidus</option>

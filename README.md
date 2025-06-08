@@ -22,7 +22,7 @@ Run the Flask app with:
 python app.py
 ```
 
-Visit `http://localhost:5000` in your browser and enter your birth details to generate the planetary positions.
+Visit `http://localhost:5000` in your browser and enter your birth details to generate the planetary positions. The form accepts either a city name or latitude/longitude coordinates. If you leave the timezone offset blank it will be detected automatically from the coordinates.
 
 ## Testing
 

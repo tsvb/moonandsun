@@ -1,6 +1,9 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, flash
 import swisseph as swe
 import datetime
+import requests
+from timezonefinder import TimezoneFinder
+from zoneinfo import ZoneInfo
 
 ZODIAC_SIGNS = [
     'Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo',
@@ -76,40 +79,84 @@ def compute_positions(jd):
     return positions
 
 app = Flask(__name__)
+app.secret_key = 'development-secret-key'
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
-        date_str = request.form['date']
-        time_str = request.form['time']
-        tz_offset = float(request.form['tz_offset'])
-        lat = float(request.form['latitude'])
-        lon = float(request.form['longitude'])
-        hsys = request.form.get('house_system', 'P').encode()
+        try:
+            date_str = request.form['date']
+            time_str = request.form['time']
+            tz_offset_str = request.form.get('tz_offset', '').strip()
+            city = request.form.get('city', '').strip()
+            lat_str = request.form.get('latitude', '').strip()
+            lon_str = request.form.get('longitude', '').strip()
+            hsys = request.form.get('house_system', 'P').encode()
 
-        dt = datetime.datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
-        dt_utc = dt - datetime.timedelta(hours=tz_offset)
-        jd = swe.julday(
-            dt_utc.year,
-            dt_utc.month,
-            dt_utc.day,
-            dt_utc.hour + dt_utc.minute / 60.0 + dt_utc.second / 3600.0,
-        )
+            # Resolve coordinates from city name if provided
+            if city and (not lat_str or not lon_str):
+                resp = requests.get(
+                    'https://nominatim.openstreetmap.org/search',
+                    params={'q': city, 'format': 'json', 'limit': 1},
+                    headers={'User-Agent': 'moonandsun'}
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                if not data:
+                    raise ValueError('City not found')
+                lat_str = data[0]['lat']
+                lon_str = data[0]['lon']
 
-        positions = compute_positions(jd)
-        chart_points = compute_chart_points(jd, lat, lon, hsys)
-        houses = compute_house_positions(positions, chart_points['cusps'])
-        formatted_positions = {n: format_longitude(p) for n, p in positions.items()}
-        formatted_asc = format_longitude(chart_points['asc'])
-        formatted_mc = format_longitude(chart_points['mc'])
-        formatted_cusps = [format_longitude(c) for c in chart_points['cusps']]
-        return render_template('chart.html', positions=formatted_positions,
-                               houses=houses,
-                               lat=lat, lon=lon, dt=dt, dt_utc=dt_utc,
-                               asc=formatted_asc,
-                               mc=formatted_mc,
-                               cusps=formatted_cusps,
-                               house_system=hsys.decode())
+            lat = float(lat_str)
+            lon = float(lon_str)
+            if not (-90 <= lat <= 90):
+                raise ValueError('Latitude must be between -90 and 90')
+            if not (-180 <= lon <= 180):
+                raise ValueError('Longitude must be between -180 and 180')
+
+            if tz_offset_str:
+                tz_offset = float(tz_offset_str)
+                dt = datetime.datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
+                dt_utc = dt - datetime.timedelta(hours=tz_offset)
+            else:
+                tf = TimezoneFinder()
+                tzname = tf.timezone_at(lat=lat, lng=lon)
+                if not tzname:
+                    raise ValueError('Could not determine timezone')
+                tzinfo = ZoneInfo(tzname)
+                dt = datetime.datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M").replace(tzinfo=tzinfo)
+                dt_utc = dt.astimezone(datetime.timezone.utc)
+
+            jd = swe.julday(
+                dt_utc.year,
+                dt_utc.month,
+                dt_utc.day,
+                dt_utc.hour + dt_utc.minute / 60.0 + dt_utc.second / 3600.0,
+            )
+
+            positions = compute_positions(jd)
+            chart_points = compute_chart_points(jd, lat, lon, hsys)
+            houses = compute_house_positions(positions, chart_points['cusps'])
+            formatted_positions = {n: format_longitude(p) for n, p in positions.items()}
+            formatted_asc = format_longitude(chart_points['asc'])
+            formatted_mc = format_longitude(chart_points['mc'])
+            formatted_cusps = [format_longitude(c) for c in chart_points['cusps']]
+            return render_template(
+                'chart.html',
+                positions=formatted_positions,
+                houses=houses,
+                lat=lat,
+                lon=lon,
+                dt=dt,
+                dt_utc=dt_utc,
+                asc=formatted_asc,
+                mc=formatted_mc,
+                cusps=formatted_cusps,
+                house_system=hsys.decode(),
+            )
+        except Exception as exc:
+            flash(str(exc))
+            return render_template('index.html')
     return render_template('index.html')
 
 if __name__ == '__main__':
