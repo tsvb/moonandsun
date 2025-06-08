@@ -33,12 +33,26 @@
   <p>Converted to UTC: {{ dt_utc }}</p>
   <p>Coordinates: {{ lat }}, {{ lon }}</p>
   <table border="1">
-    <tr><th>Body</th><th>Position</th><th>House</th></tr>
+    <tr><th>Body</th><th>Position</th><th>House</th><th>Dignity</th></tr>
     {% for name, position in positions.items() %}
     <tr>
       <td>{{ name }}</td>
       <td>{{ position }}{% if retrogrades[name] %} ℞{% endif %}</td>
       <td>{{ houses[name] }}</td>
+      <td>{{ dignities[name] }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <h2>Aspects to Angles</h2>
+  <table border="1" class="table">
+    <tr><th>Body</th><th>Angle</th><th>Aspect</th><th>Orb</th></tr>
+    {% for asp in angle_aspects %}
+    <tr>
+      <td>{{ asp.planet1 if asp.planet1 != 'Ascendant' and asp.planet1 != 'Midheaven' else asp.planet2 }}</td>
+      <td>{{ asp.planet1 if asp.planet1 in ['Ascendant','Midheaven'] else asp.planet2 }}</td>
+      <td>{{ asp.aspect }}</td>
+      <td>{{ '%.2f' % asp.orb }}</td>
     </tr>
     {% endfor %}
   </table>
@@ -79,6 +93,16 @@
     </tr>
     {% endfor %}
   </table>
+
+  <h2>Chart Patterns</h2>
+  <ul>
+    {% for triad in patterns.grand_trines %}
+    <li>Grand Trine between {{ triad[0] }}, {{ triad[1] }}, {{ triad[2] }}</li>
+    {% endfor %}
+    {% for ts in patterns.t_squares %}
+    <li>T-Square involving {{ ts[0] }}, {{ ts[1] }}, {{ ts[2] }}</li>
+    {% endfor %}
+  </ul>
 
   <h2>House Cusps ({{ house_system }})</h2>
   <table border="1">

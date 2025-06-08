@@ -14,6 +14,9 @@ from app import (
     chart_ruler,
     compute_retrogrades,
     filter_aspects_for_wheel,
+    compute_dignities,
+    compute_aspects_to_angles,
+    detect_chart_patterns,
 )
 
 
@@ -195,5 +198,35 @@ def test_birth_date_validation():
     resp = client.post('/', data=data)
     assert resp.status_code == 200
     assert b'Date must be between' in resp.data
+
+
+def test_compute_dignities():
+    positions = {'Sun': 130.0, 'Moon': 95.0}
+    dignities = compute_dignities(positions)
+    assert dignities['Sun'] == 'Domicile'
+    assert dignities['Moon'] == 'Domicile'
+
+
+def test_aspects_to_angles():
+    positions = {'Sun': 0.0}
+    aspects = compute_aspects_to_angles(positions, 0.0, 90.0)
+    assert any(
+        a['aspect'] == 'Conjunction' and 'Ascendant' in (a['planet1'], a['planet2'])
+        for a in aspects
+    )
+
+
+def test_detect_chart_patterns():
+    positions = {
+        'Sun': 0.0,
+        'Jupiter': 120.0,
+        'Mars': 240.0,
+        'Saturn': 180.0,
+        'Mercury': 90.0,
+    }
+    aspects = compute_aspects(positions)
+    patterns = detect_chart_patterns(aspects)
+    assert ('Jupiter', 'Mars', 'Sun') in patterns['grand_trines']
+    assert ('Mercury', 'Saturn', 'Sun') in patterns['t_squares']
 
 
