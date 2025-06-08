@@ -118,6 +118,24 @@ def test_compute_retrogrades():
     assert retro_retro['Mercury']
 
 
+def test_retrograde_indicator_table():
+    client = app.test_client()
+    data = {
+        'date': '2020-06-20',
+        'time': '00:00',
+        'tz_offset': '0',
+        'latitude': '0',
+        'longitude': '0',
+        'house_system': 'P'
+    }
+    resp = client.post('/', data=data)
+    assert resp.status_code == 200
+    jd = swe.julday(2020, 6, 20, 0.0)
+    positions = compute_positions(jd)
+    mercury = format_longitude(positions['Mercury']).replace("'", "&#39;") + ' ℞'
+    assert mercury.encode() in resp.data
+
+
 def test_city_lookup_failure(monkeypatch):
     client = app.test_client()
     data = {
