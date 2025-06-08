@@ -32,7 +32,7 @@
     {% for name, position in positions.items() %}
     <tr>
       <td>{{ name }}</td>
-      <td>{{ position }}</td>
+      <td>{{ position }}{% if retrogrades[name] %} ℞{% endif %}</td>
       <td>{{ houses[name] }}</td>
     </tr>
     {% endfor %}
