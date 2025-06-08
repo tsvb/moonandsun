@@ -37,6 +37,11 @@
       <option value="{{ code }}" {% if house_system_value == code %}selected{% endif %}>{{ name }}</option>
       {% endfor %}
     </select><br>
+    <label>Lunar node:</label>
+    <select name="node_type">
+      <option value="mean" {% if node_type == 'mean' %}selected{% endif %}>Mean Node</option>
+      <option value="true" {% if node_type == 'true' %}selected{% endif %}>True Node</option>
+    </select><br>
     <button type="submit">Generate</button>
   </form>
   <div id="loading">Loading...</div>
