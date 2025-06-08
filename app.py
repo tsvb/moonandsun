@@ -328,8 +328,10 @@ def filter_aspects_for_wheel(aspects, max_minor=2):
     return major + minor[:max_minor]
 
 
-def draw_chart_wheel(positions, cusps, aspects=None, retrogrades=None):
-    """Return base64-encoded PNG of an improved chart wheel."""
+def draw_chart_wheel(positions, cusps, aspects=None, retrogrades=None, asc=None, mc=None):
+    """Return base64-encoded PNG of an improved chart wheel.
+
+    The ascendant and midheaven can be highlighted if provided."""
     if aspects is None:
         aspects = []
     if retrogrades is None:
@@ -365,6 +367,22 @@ def draw_chart_wheel(positions, cusps, aspects=None, retrogrades=None):
         mx = 0.5 * math.cos(mtheta)
         my = 0.5 * math.sin(mtheta)
         ax.text(mx, my, str(i + 1), ha='center', va='center', fontsize=8)
+
+    # highlight ascendant and midheaven if supplied
+    if asc is not None:
+        theta = math.radians(90 - asc)
+        x = math.cos(theta)
+        y = math.sin(theta)
+        ax.plot([0, x], [0, y], color='red', linewidth=1.5)
+        ax.text(1.15 * math.cos(theta), 1.15 * math.sin(theta), 'ASC',
+                ha='center', va='center', fontsize=8, color='red')
+    if mc is not None:
+        theta = math.radians(90 - mc)
+        x = math.cos(theta)
+        y = math.sin(theta)
+        ax.plot([0, x], [0, y], color='blue', linewidth=1.5)
+        ax.text(1.15 * math.cos(theta), 1.15 * math.sin(theta), 'MC',
+                ha='center', va='center', fontsize=8, color='blue')
 
     # track overlapping planets for spacing
     buckets = {}
@@ -486,7 +504,14 @@ def index():
             minor_aspects = [a for a in aspects if a['type'] == 'minor']
             ruler = chart_ruler(chart_points['asc'])
             wheel_aspects = filter_aspects_for_wheel(aspects)
-            chart_img = draw_chart_wheel(positions, chart_points['cusps'], wheel_aspects, retrogrades)
+            chart_img = draw_chart_wheel(
+                positions,
+                chart_points['cusps'],
+                wheel_aspects,
+                retrogrades,
+                asc=chart_points['asc'],
+                mc=chart_points['mc'],
+            )
             formatted_positions = {n: format_longitude(p) for n, p in positions.items()}
             formatted_asc = format_longitude(chart_points['asc'])
             formatted_mc = format_longitude(chart_points['mc'])
