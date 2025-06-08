@@ -384,23 +384,29 @@ def draw_chart_wheel(positions, cusps, aspects=None, retrogrades=None, asc=None,
         ax.text(1.15 * math.cos(theta), 1.15 * math.sin(theta), 'MC',
                 ha='center', va='center', fontsize=8, color='blue')
 
-    # track overlapping planets for spacing
+    # track overlapping planets for spacing. group planets by degree and
+    # distribute them along a small arc so glyphs do not overlap.
     buckets = {}
-    planet_points = {}
     for name, lon in positions.items():
-        key = round(lon, 1)
-        offset = buckets.get(key, 0)
-        buckets[key] = offset + 1
-        theta = math.radians(90 - lon)
-        r = 0.8 - 0.05 * offset
-        x = r * math.cos(theta)
-        y = r * math.sin(theta)
-        ax.plot(x, y, 'o', color='black', markersize=5)
-        glyph = PLANET_GLYPHS.get(name, name[0])
-        ax.text(x, y + 0.05, glyph, ha='center', va='center', fontsize=10)
-        if retrogrades.get(name):
-            ax.text(x, y - 0.05, '℞', ha='center', va='center', fontsize=6)
-        planet_points[name] = (x, y)
+        key = round(lon)  # bucket planets within 1 degree
+        buckets.setdefault(key, []).append((name, lon))
+
+    planet_points = {}
+    for items in buckets.values():
+        count = len(items)
+        items.sort(key=lambda t: t[1])
+        for i, (name, lon) in enumerate(items):
+            angle_offset = (i - (count - 1) / 2) * 0.5  # degrees
+            theta = math.radians(90 - (lon + angle_offset))
+            r = 0.8 - 0.05 * i
+            x = r * math.cos(theta)
+            y = r * math.sin(theta)
+            ax.plot(x, y, 'o', color='black', markersize=5)
+            glyph = PLANET_GLYPHS.get(name, name[0])
+            ax.text(x, y + 0.05, glyph, ha='center', va='center', fontsize=10)
+            if retrogrades.get(name):
+                ax.text(x, y - 0.05, '℞', ha='center', va='center', fontsize=6)
+            planet_points[name] = (x, y)
 
     # draw aspect lines
     aspect_colors = {
