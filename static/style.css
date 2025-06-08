@@ -26,3 +26,7 @@ input, select {
     border: 1px solid #999;
     padding: 4px 8px;
 }
+
+.important {
+    background-color: #fffae6;
+}

@@ -55,16 +55,61 @@ SIGN_RULERS = {
 
 # Aspect configuration: aspect angle and maximum orb
 ASPECTS_INFO = {
-    'Conjunction': {'angle': 0, 'orb': 8},
-    'Opposition': {'angle': 180, 'orb': 8},
-    'Square': {'angle': 90, 'orb': 6},
-    'Trine': {'angle': 120, 'orb': 6},
-    'Sextile': {'angle': 60, 'orb': 4},
+    'Conjunction': {
+        'angle': 0,
+        'orb': 8,
+        'type': 'major',
+        'keywords': 'blending, emphasis',
+    },
+    'Opposition': {
+        'angle': 180,
+        'orb': 8,
+        'type': 'major',
+        'keywords': 'tension, awareness',
+    },
+    'Square': {
+        'angle': 90,
+        'orb': 6,
+        'type': 'major',
+        'keywords': 'challenge, action',
+    },
+    'Trine': {
+        'angle': 120,
+        'orb': 6,
+        'type': 'major',
+        'keywords': 'harmony, ease',
+    },
+    'Sextile': {
+        'angle': 60,
+        'orb': 4,
+        'type': 'major',
+        'keywords': 'opportunity, cooperation',
+    },
     # Extended aspects
-    'Quincunx': {'angle': 150, 'orb': 3},
-    'Semi-sextile': {'angle': 30, 'orb': 2},
-    'Semi-square': {'angle': 45, 'orb': 2},
-    'Sesquiquadrate': {'angle': 135, 'orb': 2},
+    'Quincunx': {
+        'angle': 150,
+        'orb': 3,
+        'type': 'minor',
+        'keywords': 'adjustment, discomfort',
+    },
+    'Semi-sextile': {
+        'angle': 30,
+        'orb': 2,
+        'type': 'minor',
+        'keywords': 'mild growth, awareness',
+    },
+    'Semi-square': {
+        'angle': 45,
+        'orb': 2,
+        'type': 'minor',
+        'keywords': 'irritation, friction',
+    },
+    'Sesquiquadrate': {
+        'angle': 135,
+        'orb': 2,
+        'type': 'minor',
+        'keywords': 'pressure, imbalance',
+    },
 }
 
 
@@ -231,13 +276,22 @@ def compute_aspects(positions):
                 orb = abs(diff - info['angle'])
                 if orb <= info['orb']:
                     strength = max(0.0, 1 - orb / info['orb'])
+                    importance = ''
+                    if orb <= 0.5:
+                        importance = 'exact'
+                    elif orb <= 1.0:
+                        importance = 'close'
                     aspects.append({
                         'planet1': p1,
                         'planet2': p2,
                         'aspect': aspect,
                         'orb': orb,
                         'strength': strength,
+                        'type': info.get('type', 'minor'),
+                        'keywords': info.get('keywords', ''),
+                        'importance': importance,
                     })
+    aspects.sort(key=lambda a: a['strength'], reverse=True)
     return aspects
 
 
@@ -390,6 +444,8 @@ def index():
             chart_points = compute_chart_points(jd, lat, lon, hsys)
             houses = compute_house_positions(positions, chart_points['cusps'])
             aspects = compute_aspects(positions)
+            major_aspects = [a for a in aspects if a['type'] == 'major']
+            minor_aspects = [a for a in aspects if a['type'] == 'minor']
             ruler = chart_ruler(chart_points['asc'])
             chart_img = draw_chart_wheel(positions, chart_points['cusps'], aspects)
             formatted_positions = {n: format_longitude(p) for n, p in positions.items()}
@@ -402,6 +458,8 @@ def index():
                 'chart.html',
                 positions=formatted_positions,
                 houses=houses,
+                major_aspects=major_aspects,
+                minor_aspects=minor_aspects,
                 aspects=aspects,
                 chart_ruler=ruler,
                 chart_img=chart_img,
