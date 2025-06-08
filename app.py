@@ -13,6 +13,8 @@ import json
 import re
 import time
 from pathlib import Path
+import asyncio
+from functools import lru_cache
 
 ZODIAC_SIGNS = [
     "Aries",
@@ -406,6 +408,7 @@ def fetch_chiron_info(jd):
     return fetch_horizons_info(jd, "2060")
 
 
+@lru_cache(maxsize=128)
 def compute_body_info(jd, node_type: str = "mean"):
     """Return longitude and speed for each major body."""
 
@@ -467,6 +470,20 @@ def compute_positions(jd, node_type: str = "mean"):
         except Exception:
             pass
     return result
+
+
+async def generate_chart_async(chart_data):
+    """Return chart wheel asynchronously using a thread executor."""
+    return await asyncio.to_thread(
+        draw_chart_wheel,
+        chart_data["positions"],
+        chart_data["cusps"],
+        chart_data.get("aspects"),
+        chart_data.get("retrogrades"),
+        asc=chart_data.get("asc"),
+        mc=chart_data.get("mc"),
+        interactive=chart_data.get("interactive", False),
+    )
 
 
 def compute_retrogrades(jd, node_type: str = "mean"):

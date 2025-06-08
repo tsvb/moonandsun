@@ -70,6 +70,9 @@
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/static/service-worker.js');
     }
+    if (window.Worker) {
+      window.calcWorker = new Worker('/static/worker.js');
+    }
   </script>
   <p><a href="{{ url_for('list_charts') }}">View saved charts</a></p>
 </body>
