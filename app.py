@@ -683,6 +683,96 @@ def filter_aspects_for_wheel(aspects, max_minor=2):
     return major + minor[:max_minor]
 
 
+def secondary_progressions(natal_jd, target_jd, node_type: str = 'mean'):
+    """Return progressed positions using the day-for-a-year method."""
+    progressed_jd = natal_jd + (target_jd - natal_jd) / 365.25
+    return compute_positions(progressed_jd, node_type)
+
+
+def solar_arc_progressions(natal_jd, target_jd, node_type: str = 'mean'):
+    """Return solar arc progressed positions."""
+    natal = compute_positions(natal_jd, node_type)
+    target = compute_positions(target_jd, node_type)
+    arc = (target['Sun'] - natal['Sun']) % 360
+    return {name: (lon + arc) % 360 for name, lon in natal.items()}
+
+
+def solar_return_jd(natal_jd, year, tol=1e-5, node_type: str = 'mean'):
+    """Return Julian day of the solar return for the given year."""
+    natal_sun = compute_positions(natal_jd, node_type)['Sun']
+    approx = natal_jd + 365.25 * year
+    low = approx - 5
+    high = approx + 5
+
+    def diff(jd):
+        sun = compute_positions(jd, node_type)['Sun']
+        return ((sun - natal_sun + 180) % 360) - 180
+
+    for _ in range(20):
+        mid = (low + high) / 2
+        d = diff(mid)
+        if abs(d) < tol:
+            return mid
+        if d > 0:
+            high = mid
+        else:
+            low = mid
+    return mid
+
+
+def lunar_return_jd(natal_jd, month, tol=1e-5, node_type: str = 'mean'):
+    """Return Julian day of the lunar return for the given month."""
+    natal_moon = compute_positions(natal_jd, node_type)['Moon']
+    approx = natal_jd + 27.321582 * month
+    low = approx - 2
+    high = approx + 2
+
+    def diff(jd):
+        moon = compute_positions(jd, node_type)['Moon']
+        return ((moon - natal_moon + 180) % 360) - 180
+
+    for _ in range(20):
+        mid = (low + high) / 2
+        d = diff(mid)
+        if abs(d) < tol:
+            return mid
+        if d > 0:
+            high = mid
+        else:
+            low = mid
+    return mid
+
+
+def transits(natal_positions, target_jd, node_type: str = 'mean'):
+    """Return current positions and aspects to natal chart."""
+    current = compute_positions(target_jd, node_type)
+    pref_n = {f"n_{k}": v for k, v in natal_positions.items()}
+    pref_c = {f"t_{k}": v for k, v in current.items()}
+    combined = pref_n | pref_c
+    asps = compute_aspects(combined)
+    cross = [
+        {**a, 'planet1': a['planet1'][2:], 'planet2': a['planet2'][2:]}
+        for a in asps
+        if (a['planet1'].startswith('n_') and a['planet2'].startswith('t_'))
+        or (a['planet1'].startswith('t_') and a['planet2'].startswith('n_'))
+    ]
+    return {'positions': current, 'aspects': cross}
+
+
+def electional_days(natal_positions, start_jd, end_jd, step=0.25, orb=1.0):
+    """Return days when the transiting Moon trines the natal Sun."""
+    sun = natal_positions['Sun']
+    days = []
+    jd = start_jd
+    while jd <= end_jd:
+        moon = compute_positions(jd)['Moon']
+        diff = abs(((moon - sun + 180) % 360) - 180)
+        if abs(diff - 120) <= orb:
+            days.append(jd)
+        jd += step
+    return days
+
+
 def draw_chart_wheel(positions, cusps, aspects=None, retrogrades=None, asc=None,
                      mc=None, interactive=False):
     """Return a chart wheel as base64 PNG or interactive HTML.
