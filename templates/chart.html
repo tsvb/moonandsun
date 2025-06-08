@@ -4,10 +4,14 @@
   <title>Natal Chart Results</title>
   <meta name="description" content="Natal chart results showing planetary positions, houses and aspects.">
   <meta name="keywords" content="astrology, natal chart, birth chart, horoscope, planets, houses, aspects, chart wheel, ascendant">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <meta name="theme-color" content="#ffffff">
 </head>
 <body>
   <h1>Natal Chart</h1>
+  <button id="theme-toggle" type="button">Dark mode</button>
   {% if interactive %}
   <div id="chart-container">{{ chart_html|safe }}</div>
   {% else %}
@@ -33,6 +37,20 @@
         link.download = `chart_${dtStr}.png`;
         link.click();
       });
+    const toggleBtn = document.getElementById('theme-toggle');
+    const setTheme = t => {
+      document.documentElement.dataset.theme = t;
+      localStorage.setItem('theme', t);
+      toggleBtn.textContent = t === 'dark' ? 'Light mode' : 'Dark mode';
+    };
+    setTheme(localStorage.getItem('theme') || 'light');
+    toggleBtn.addEventListener('click', () => {
+      const cur = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+      setTheme(cur);
+    });
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/static/service-worker.js');
+    }
   </script>
   <p>Birth time (local): {{ dt }}</p>
   <p>Converted to UTC: {{ dt_utc }}</p>
