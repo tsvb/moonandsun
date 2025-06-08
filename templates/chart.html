@@ -30,16 +30,32 @@
   <h2>Chart Ruler</h2>
   <p>{{ chart_ruler }}</p>
 
-  <h2>Aspects</h2>
-  <table border="1">
-    <tr><th>Planet 1</th><th>Planet 2</th><th>Aspect</th><th>Orb</th><th>Strength</th></tr>
-    {% for asp in aspects %}
-    <tr>
+  <h2>Major Aspects</h2>
+  <table border="1" class="table">
+    <tr><th>Planet 1</th><th>Planet 2</th><th>Aspect</th><th>Orb</th><th>Strength</th><th>Keywords</th></tr>
+    {% for asp in major_aspects %}
+    <tr class="{% if asp.importance %}important{% endif %}">
       <td>{{ asp.planet1 }}</td>
       <td>{{ asp.planet2 }}</td>
       <td>{{ asp.aspect }}</td>
       <td>{{ '%.2f' % asp.orb }}</td>
       <td>{{ '%.2f' % asp.strength }}</td>
+      <td>{{ asp.keywords }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <h2>Minor Aspects</h2>
+  <table border="1" class="table">
+    <tr><th>Planet 1</th><th>Planet 2</th><th>Aspect</th><th>Orb</th><th>Strength</th><th>Keywords</th></tr>
+    {% for asp in minor_aspects %}
+    <tr class="{% if asp.importance %}important{% endif %}">
+      <td>{{ asp.planet1 }}</td>
+      <td>{{ asp.planet2 }}</td>
+      <td>{{ asp.aspect }}</td>
+      <td>{{ '%.2f' % asp.orb }}</td>
+      <td>{{ '%.2f' % asp.strength }}</td>
+      <td>{{ asp.keywords }}</td>
     </tr>
     {% endfor %}
   </table>

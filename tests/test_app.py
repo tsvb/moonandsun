@@ -109,6 +109,16 @@ def test_extended_aspects():
     )
 
 
+def test_aspect_sorting_and_keywords():
+    jd = swe.julday(2000, 1, 1, 12.0)
+    positions = compute_positions(jd)
+    aspects = compute_aspects(positions)
+    assert len(aspects) >= 2
+    assert aspects[0]['strength'] >= aspects[1]['strength']
+    assert 'type' in aspects[0]
+    assert 'keywords' in aspects[0]
+
+
 def test_compute_retrogrades():
     jd_direct = swe.julday(2000, 1, 1, 12.0)
     jd_retro = swe.julday(2020, 6, 20, 0.0)
