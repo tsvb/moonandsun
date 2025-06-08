@@ -225,8 +225,24 @@ def test_detect_chart_patterns():
         'Mercury': 90.0,
     }
     aspects = compute_aspects(positions)
-    patterns = detect_chart_patterns(aspects)
+    patterns = detect_chart_patterns(aspects, positions)
     assert ('Jupiter', 'Mars', 'Sun') in patterns['grand_trines']
-    assert ('Mercury', 'Saturn', 'Sun') in patterns['t_squares']
+    ts_match = [ts for ts in patterns['t_squares'] if set(ts['planets']) == {'Mercury', 'Saturn', 'Sun'}]
+    assert ts_match and ts_match[0]['type'] == 'Cardinal'
+    assert ('Jupiter', 'Mars', 'Saturn', 'Sun') in patterns['kites']
+
+
+def test_yod_and_stellium_detection():
+    positions = {
+        'Mercury': 0.0,
+        'Venus': 5.0,
+        'Sun': 7.0,
+        'Jupiter': 60.0,
+        'Mars': 210.0,
+    }
+    aspects = compute_aspects(positions)
+    patterns = detect_chart_patterns(aspects, positions)
+    assert any(s['sign'] == 'Aries' for s in patterns['stelliums'])
+    assert ('Jupiter', 'Mars', 'Mercury') in patterns['yods']
 
 

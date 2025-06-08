@@ -99,8 +99,17 @@
     {% for triad in patterns.grand_trines %}
     <li>Grand Trine between {{ triad[0] }}, {{ triad[1] }}, {{ triad[2] }}</li>
     {% endfor %}
+    {% for kite in patterns.kites %}
+    <li>Kite involving {{ kite[0] }}, {{ kite[1] }}, {{ kite[2] }}, {{ kite[3] }}</li>
+    {% endfor %}
+    {% for yod in patterns.yods %}
+    <li>Yod between {{ yod[0] }}, {{ yod[1] }}, {{ yod[2] }}</li>
+    {% endfor %}
+    {% for st in patterns.stelliums %}
+    <li>Stellium in {{ st.sign }}: {{ ', '.join(st.planets) }}</li>
+    {% endfor %}
     {% for ts in patterns.t_squares %}
-    <li>T-Square involving {{ ts[0] }}, {{ ts[1] }}, {{ ts[2] }}</li>
+    <li>T-Square involving {{ ts.planets[0] }}, {{ ts.planets[1] }}, {{ ts.planets[2] }}{% if ts.type %} ({{ ts.type }}){% endif %}</li>
     {% endfor %}
   </ul>
 

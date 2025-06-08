@@ -19,6 +19,13 @@ ZODIAC_SIGNS = [
     'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'
 ]
 
+# Signs grouped by modality for pattern classification
+MODALITY_SIGNS = {
+    'Cardinal': ['Aries', 'Cancer', 'Libra', 'Capricorn'],
+    'Fixed': ['Taurus', 'Leo', 'Scorpio', 'Aquarius'],
+    'Mutable': ['Gemini', 'Virgo', 'Sagittarius', 'Pisces'],
+}
+
 # Glyphs for zodiac signs and planets to draw nicer chart wheels
 ZODIAC_GLYPHS = [
     '♈', '♉', '♊', '♋', '♌', '♍',
@@ -437,14 +444,18 @@ def compute_aspects_to_angles(positions, asc, mc):
     ]
 
 
-def detect_chart_patterns(aspects):
-    """Identify grand trines and t-squares in the aspect list."""
+def detect_chart_patterns(aspects, positions=None):
+    """Identify common aspect patterns including stelliums and kites."""
     trines = {}
     oppositions = []
     squares = []
+    sextiles = set()
+    quincunx = {}
+    bodies = set()
     for asp in aspects:
         p1 = asp['planet1']
         p2 = asp['planet2']
+        bodies.update([p1, p2])
         if asp['aspect'] == 'Trine':
             trines.setdefault(p1, set()).add(p2)
             trines.setdefault(p2, set()).add(p1)
@@ -452,12 +463,17 @@ def detect_chart_patterns(aspects):
             oppositions.append((p1, p2))
         elif asp['aspect'] == 'Square':
             squares.append((p1, p2))
+        elif asp['aspect'] == 'Sextile':
+            sextiles.add(frozenset([p1, p2]))
+        elif asp['aspect'] == 'Quincunx':
+            quincunx.setdefault(p1, set()).add(p2)
+            quincunx.setdefault(p2, set()).add(p1)
 
     from itertools import combinations
 
     grand_trines = set()
-    bodies = set(trines.keys())
-    for a, b, c in combinations(sorted(bodies), 3):
+    triad_bodies = set(trines.keys())
+    for a, b, c in combinations(sorted(triad_bodies), 3):
         if (
             b in trines.get(a, set())
             and c in trines.get(a, set())
@@ -475,9 +491,76 @@ def detect_chart_patterns(aspects):
         for z in square_map.get(x, set()) & square_map.get(y, set()):
             t_squares.add(tuple(sorted([x, y, z])))
 
+    # classify t-squares by modality if positions supplied
+    t_square_info = {}
+    if positions:
+        for ts in t_squares:
+            modes = []
+            for body in ts:
+                sign = ZODIAC_SIGNS[int(positions[body] // 30) % 12]
+                mode = next(
+                    (m for m, signs in MODALITY_SIGNS.items() if sign in signs),
+                    None,
+                )
+                modes.append(mode)
+            emphasis = modes[0] if modes.count(modes[0]) == 3 else None
+            t_square_info[ts] = emphasis
+
+    # detect kites based on grand trines
+    opposition_set = {frozenset(o) for o in oppositions}
+    kites = set()
+    for tri in grand_trines:
+        others = bodies - set(tri)
+        for d in others:
+            for opp_point in tri:
+                if frozenset([d, opp_point]) not in opposition_set:
+                    continue
+                rem = [p for p in tri if p != opp_point]
+                if (
+                    frozenset([d, rem[0]]) in sextiles
+                    and frozenset([d, rem[1]]) in sextiles
+                ):
+                    kite = tuple(sorted([d] + list(tri)))
+                    kites.add(kite)
+                    break
+
+    # detect yods
+    yods = set()
+    for pair in sextiles:
+        a, b = list(pair)
+        for c in quincunx.get(a, set()) & quincunx.get(b, set()):
+            yods.add(tuple(sorted([a, b, c])))
+
+    # detect stelliums within signs (3+ planets in 8 degrees)
+    stelliums = []
+    if positions:
+        sign_groups = {i: [] for i in range(12)}
+        for body, lon in positions.items():
+            sign_idx = int(lon // 30) % 12
+            deg_in_sign = lon % 30
+            sign_groups[sign_idx].append((body, deg_in_sign))
+        for idx, items in sign_groups.items():
+            if len(items) < 3:
+                continue
+            items.sort(key=lambda t: t[1])
+            for i in range(len(items)):
+                j = i
+                while j < len(items) and items[j][1] - items[i][1] <= 8:
+                    j += 1
+                if j - i >= 3:
+                    planets = tuple(sorted(p for p, _ in items[i:j]))
+                    record = {'sign': ZODIAC_SIGNS[idx], 'planets': planets}
+                    if record not in stelliums:
+                        stelliums.append(record)
+
     return {
         'grand_trines': sorted(grand_trines),
-        't_squares': sorted(t_squares),
+        't_squares': [
+            {'planets': ts, 'type': t_square_info.get(ts)} for ts in sorted(t_squares)
+        ],
+        'kites': sorted(kites),
+        'yods': sorted(yods),
+        'stelliums': stelliums,
     }
 
 
@@ -693,7 +776,7 @@ def index():
             minor_aspects = [a for a in aspects if a['type'] == 'minor']
             ruler = chart_ruler(chart_points['asc'])
             dignities = compute_dignities(positions)
-            patterns = detect_chart_patterns(aspects)
+            patterns = detect_chart_patterns(aspects, positions)
             wheel_aspects = filter_aspects_for_wheel(aspects)
             chart_img = draw_chart_wheel(
                 positions,
