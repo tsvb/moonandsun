@@ -18,6 +18,12 @@ from app import (
     compute_aspects_to_angles,
     detect_chart_patterns,
     compute_synastry_aspects,
+    secondary_progressions,
+    solar_arc_progressions,
+    solar_return_jd,
+    lunar_return_jd,
+    transits,
+    electional_days,
 )
 
 
@@ -276,5 +282,47 @@ def test_compute_synastry_aspects():
         for a in cross
     )
     assert syn['composite_positions']['Sun'] == 90.0
+
+
+def test_secondary_progressions():
+    natal_jd = swe.julday(2000, 1, 1, 12.0)
+    target_jd = swe.julday(2030, 1, 1, 12.0)
+    prog = secondary_progressions(natal_jd, target_jd)
+    expect = compute_positions(natal_jd + (target_jd - natal_jd) / 365.25)
+    assert abs(prog['Sun'] - expect['Sun']) < 1e-6
+
+
+def test_solar_arc_progressions():
+    natal_jd = swe.julday(2000, 1, 1, 12.0)
+    target_jd = swe.julday(2030, 1, 1, 12.0)
+    prog = solar_arc_progressions(natal_jd, target_jd)
+    natal = compute_positions(natal_jd)
+    target = compute_positions(target_jd)
+    arc = (target['Sun'] - natal['Sun']) % 360
+    expected = (natal['Moon'] + arc) % 360
+    assert abs(prog['Moon'] - expected) < 1e-6
+
+
+def test_returns_and_transits():
+    natal_jd = swe.julday(2000, 1, 1, 12.0)
+    natal = compute_positions(natal_jd)
+    sr_jd = solar_return_jd(natal_jd, 1)
+    diff_sun = ((compute_positions(sr_jd)['Sun'] - natal['Sun'] + 180) % 360) - 180
+    assert abs(diff_sun) < 1e-4
+    lr_jd = lunar_return_jd(natal_jd, 1)
+    diff_moon = ((compute_positions(lr_jd)['Moon'] - natal['Moon'] + 180) % 360) - 180
+    assert abs(diff_moon) < 1e-4
+    t = transits(natal, sr_jd)
+    assert 'positions' in t and 'aspects' in t
+    assert t['aspects']
+
+
+def test_electional_days():
+    natal_jd = swe.julday(2000, 1, 1, 12.0)
+    natal = compute_positions(natal_jd)
+    start = swe.julday(2000, 1, 15, 0.0)
+    end = swe.julday(2000, 1, 25, 0.0)
+    days = electional_days(natal, start, end)
+    assert days and all(start <= d <= end for d in days)
 
 
