@@ -71,6 +71,16 @@ pyinstaller natal_chart.spec
 
 The resulting executable will be placed in the `dist/` directory. If you added `icons/icon.ico` before building on Windows (or `icon.icns` on macOS) the installer will include it automatically.
 
+## Time-Based Features
+
+Additional helpers calculate progressed and return charts:
+
+- **Secondary progressions** using the day-for-a-year method.
+- **Solar arc progressions** adding the Sun's arc to all bodies.
+- **Transits** comparing current positions to a natal chart.
+- **Solar and lunar returns** for annual and monthly cycles.
+- **Electional suggestions** when the transiting Moon trines the natal Sun.
+
 ## Future Work
 
 Next development steps focus on improving the user interface.
