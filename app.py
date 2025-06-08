@@ -126,7 +126,10 @@ ASPECTS_INFO = {
 
 def load_charts():
     with open(CHARTS_INDEX) as f:
-        return json.load(f)
+        try:
+            return json.load(f)
+        except json.JSONDecodeError:
+            return []
 
 
 def save_charts(charts):
@@ -558,13 +561,37 @@ def save_chart():
     if not name or not img_data:
         flash('Chart name and image required')
         return redirect(url_for('index'))
+
+    birth_dt = request.form.get('birth_dt')
+    house_system = request.form.get('house_system')
+    lat = request.form.get('latitude')
+    lon = request.form.get('longitude')
+
     data = img_data.split(',', 1)[-1]
     img_bytes = base64.b64decode(data)
+
     slug = re.sub(r'[^a-zA-Z0-9_-]', '_', name)
-    fname = f"{slug}_{int(time.time())}.png"
+    dt_str = None
+    if birth_dt:
+        try:
+            dt_obj = datetime.datetime.fromisoformat(birth_dt)
+            dt_str = dt_obj.strftime('%Y%m%d_%H%M')
+        except ValueError:
+            dt_str = None
+    if not dt_str:
+        dt_str = str(int(time.time()))
+    fname = f"{slug}_{dt_str}.png"
     (CHARTS_DIR / fname).write_bytes(img_bytes)
+
+    metadata = {
+        'birth_dt': birth_dt,
+        'house_system': house_system,
+        'latitude': lat,
+        'longitude': lon,
+    }
+
     charts = load_charts()
-    charts.append({'name': name, 'file': fname})
+    charts.append({'name': name, 'file': fname, 'metadata': metadata})
     save_charts(charts)
     flash('Chart saved')
     return redirect(url_for('list_charts'))
@@ -583,6 +610,22 @@ def download_chart(filename):
         flash('File not found')
         return redirect(url_for('index'))
     return send_file(path, as_attachment=True, download_name=filename)
+
+
+@app.route('/delete/<path:filename>', methods=['POST'])
+def delete_chart(filename):
+    charts = load_charts()
+    chart = next((c for c in charts if c.get('file') == filename), None)
+    if not chart:
+        flash('Chart not found')
+        return redirect(url_for('list_charts'))
+    path = CHARTS_DIR / filename
+    if path.exists():
+        path.unlink()
+    charts = [c for c in charts if c.get('file') != filename]
+    save_charts(charts)
+    flash('Chart deleted')
+    return redirect(url_for('list_charts'))
 
 if __name__ == '__main__':
     app.run(debug=True)
