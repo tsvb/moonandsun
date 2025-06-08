@@ -550,8 +550,26 @@ def index():
             )
         except Exception as exc:
             flash(str(exc))
-            return render_template('index.html')
-    return render_template('index.html')
+            return render_template(
+                'index.html',
+                date_value=request.form.get('date', ''),
+                time_value=request.form.get('time', ''),
+                tz_offset_value=request.form.get('tz_offset', ''),
+                city_value=request.form.get('city', ''),
+                lat_value=request.form.get('latitude', ''),
+                lon_value=request.form.get('longitude', ''),
+                house_system_value=request.form.get('house_system', 'P'),
+            )
+    return render_template(
+        'index.html',
+        date_value='',
+        time_value='',
+        tz_offset_value='',
+        city_value='',
+        lat_value='',
+        lon_value='',
+        house_system_value='P',
+    )
 
 
 @app.route('/save_chart', methods=['POST'])
@@ -626,6 +644,36 @@ def delete_chart(filename):
     save_charts(charts)
     flash('Chart deleted')
     return redirect(url_for('list_charts'))
+
+
+@app.route('/edit/<path:filename>')
+def edit_chart(filename):
+    charts = load_charts()
+    chart = next((c for c in charts if c.get('file') == filename), None)
+    if not chart:
+        flash('Chart not found')
+        return redirect(url_for('list_charts'))
+    md = chart.get('metadata', {})
+    date_val = ''
+    time_val = ''
+    dt_iso = md.get('birth_dt')
+    if dt_iso:
+        try:
+            dt_obj = datetime.datetime.fromisoformat(dt_iso)
+            date_val = dt_obj.strftime('%Y-%m-%d')
+            time_val = dt_obj.strftime('%H:%M')
+        except ValueError:
+            pass
+    return render_template(
+        'index.html',
+        date_value=date_val,
+        time_value=time_val,
+        tz_offset_value='',
+        city_value='',
+        lat_value=md.get('latitude', ''),
+        lon_value=md.get('longitude', ''),
+        house_system_value=md.get('house_system', 'P'),
+    )
 
 if __name__ == '__main__':
     app.run(debug=True)
