@@ -37,6 +37,15 @@ Run the automated tests with:
 pytest
 ```
 
+## Chart Management
+
+After generating a chart you can save it from the results page. Saved charts are
+listed on a dedicated page where each entry shows the chart name and birth date.
+You can download or delete individual charts. The stored metadata includes the
+birth details, coordinates and chosen house system so charts remain identifiable.
+Saved image filenames incorporate the chart name and birth timestamp instead of
+generic numbers.
+
 ## Packaging
 
 You can create standalone executables for Windows, macOS and Linux using [PyInstaller](https://www.pyinstaller.org/). The repository includes a `natal_chart.spec` file that bundles the templates and license.

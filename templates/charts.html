@@ -10,7 +10,14 @@
   <ul>
   {% for c in charts %}
     <li>
-      {{ c.name }} - <a href="{{ url_for('download_chart', filename=c.file) }}">Download</a>
+      {{ c.name }}
+      {% if c.metadata %}
+        ({{ c.metadata.birth_dt }})
+      {% endif %}
+      - <a href="{{ url_for('download_chart', filename=c.file) }}">Download</a>
+      <form action="{{ url_for('delete_chart', filename=c.file) }}" method="post" style="display:inline;">
+        <button type="submit">Delete</button>
+      </form>
     </li>
   {% else %}
     <li>No charts saved.</li>
