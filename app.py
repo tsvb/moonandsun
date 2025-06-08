@@ -511,6 +511,46 @@ def compute_aspects_to_angles(positions, asc, mc):
     ]
 
 
+def compute_synastry_aspects(chart1_positions, chart2_positions):
+    """Return cross-aspects and midpoint charts for two sets of positions."""
+
+    def midpoint_angle(lon1, lon2):
+        diff = abs(lon1 - lon2)
+        if diff <= 180:
+            return ((lon1 + lon2) / 2) % 360
+        return ((lon1 + lon2 + 360) / 2) % 360
+
+    pref1 = {f"1_{k}": v for k, v in chart1_positions.items()}
+    pref2 = {f"2_{k}": v for k, v in chart2_positions.items()}
+    combined = pref1 | pref2
+
+    aspects = compute_aspects(combined)
+    cross = [
+        {
+            **a,
+            'planet1': a['planet1'][2:],
+            'planet2': a['planet2'][2:],
+        }
+        for a in aspects
+        if (a['planet1'].startswith('1_') and a['planet2'].startswith('2_'))
+        or (a['planet1'].startswith('2_') and a['planet2'].startswith('1_'))
+    ]
+
+    bodies = chart1_positions.keys() & chart2_positions.keys()
+    composite = {
+        b: midpoint_angle(chart1_positions[b], chart2_positions[b]) for b in bodies
+    }
+    davison = composite.copy()
+
+    return {
+        'cross_aspects': cross,
+        'composite_positions': composite,
+        'composite_aspects': compute_aspects(composite) if len(composite) > 1 else [],
+        'davison_positions': davison,
+        'davison_aspects': compute_aspects(davison) if len(davison) > 1 else [],
+    }
+
+
 def detect_chart_patterns(aspects, positions=None):
     """Identify common aspect patterns including stelliums and kites."""
     trines = {}
