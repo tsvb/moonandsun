@@ -347,7 +347,8 @@ def index():
                     resp = requests.get(
                         'https://nominatim.openstreetmap.org/search',
                         params={'q': city, 'format': 'json', 'limit': 1},
-                        headers={'User-Agent': 'moonandsun'}
+                        headers={'User-Agent': 'moonandsun'},
+                        timeout=10
                     )
                     resp.raise_for_status()
                     data = resp.json()
