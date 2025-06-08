@@ -15,6 +15,31 @@ ZODIAC_SIGNS = [
     'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'
 ]
 
+# Glyphs for zodiac signs and planets to draw nicer chart wheels
+ZODIAC_GLYPHS = [
+    '♈', '♉', '♊', '♋', '♌', '♍',
+    '♎', '♏', '♐', '♑', '♒', '♓'
+]
+
+PLANET_GLYPHS = {
+    'Sun': '☉',
+    'Moon': '☽',
+    'Mercury': '☿',
+    'Venus': '♀',
+    'Mars': '♂',
+    'Jupiter': '♃',
+    'Saturn': '♄',
+    'Uranus': '♅',
+    'Neptune': '♆',
+    'Pluto': '♇',
+    'Chiron': '⚷',
+    'Mean Node': '☊',
+    'Black Moon Lilith': '⚸',
+}
+
+# Symbol used to denote retrograde motion
+RETROGRADE_GLYPH = '℞'
+
 # Mapping of zodiac signs to their ruling planets for chart ruler detection
 SIGN_RULERS = {
     'Aries': 'Mars',
@@ -219,24 +244,82 @@ def compute_aspects(positions):
     return aspects
 
 
-def draw_chart_wheel(positions, cusps):
-    """Return base64-encoded PNG of a simple chart wheel."""
-    fig, ax = plt.subplots(figsize=(6, 6), subplot_kw={'projection': 'polar'})
-    ax.set_theta_direction(-1)
-    ax.set_theta_offset(math.radians(90))
-    ax.set_yticklabels([])
-    ax.set_xticklabels([])
+def draw_chart_wheel(positions, cusps, aspects=None, retrogrades=None):
+    """Return base64-encoded PNG of an improved chart wheel."""
+    if aspects is None:
+        aspects = []
+    if retrogrades is None:
+        retrogrades = {}
 
-    # draw house cusps
-    for cusp in cusps:
+    fig, ax = plt.subplots(figsize=(6, 6))
+    ax.set_aspect('equal')
+    ax.axis('off')
+
+    # outer circle for zodiac
+    outer = plt.Circle((0, 0), 1, fill=False, lw=1, color='black')
+    ax.add_artist(outer)
+
+    # zodiac glyphs
+    for i, glyph in enumerate(ZODIAC_GLYPHS):
+        deg = i * 30 + 15
+        theta = math.radians(90 - deg)
+        x = 1.08 * math.cos(theta)
+        y = 1.08 * math.sin(theta)
+        ax.text(x, y, glyph, ha='center', va='center', fontsize=12)
+
+    # draw house cusps and numbers
+    for i, cusp in enumerate(cusps):
         theta = math.radians(90 - cusp)
-        ax.plot([theta, theta], [0, 1], color='black', linewidth=0.5)
+        x = math.cos(theta)
+        y = math.sin(theta)
+        ax.plot([0, x], [0, y], color='black', linewidth=0.5)
 
-    # plot planet positions
+        next_cusp = cusps[(i + 1) % 12]
+        diff = (next_cusp - cusp) % 360
+        mid_deg = (cusp + diff / 2) % 360
+        mtheta = math.radians(90 - mid_deg)
+        mx = 0.5 * math.cos(mtheta)
+        my = 0.5 * math.sin(mtheta)
+        ax.text(mx, my, str(i + 1), ha='center', va='center', fontsize=8)
+
+    # track overlapping planets for spacing
+    buckets = {}
+    planet_points = {}
     for name, lon in positions.items():
+        key = round(lon, 1)
+        offset = buckets.get(key, 0)
+        buckets[key] = offset + 1
         theta = math.radians(90 - lon)
-        ax.plot(theta, 0.8, 'o')
-        ax.text(theta, 0.85, name[0], ha='center', va='center', fontsize=8)
+        r = 0.8 - 0.05 * offset
+        x = r * math.cos(theta)
+        y = r * math.sin(theta)
+        ax.plot(x, y, 'o', color='black', markersize=5)
+        glyph = PLANET_GLYPHS.get(name, name[0])
+        ax.text(x, y + 0.05, glyph, ha='center', va='center', fontsize=10)
+        if retrogrades.get(name):
+            ax.text(x, y - 0.05, RETROGRADE_GLYPH, ha='center', va='center', fontsize=8)
+        planet_points[name] = (x, y)
+
+    # draw aspect lines
+    aspect_colors = {
+        'Conjunction': 'green',
+        'Opposition': 'red',
+        'Square': 'red',
+        'Trine': 'green',
+        'Sextile': 'blue',
+    }
+    for asp in aspects:
+        p1 = asp['planet1']
+        p2 = asp['planet2']
+        if p1 not in planet_points or p2 not in planet_points:
+            continue
+        x1, y1 = planet_points[p1]
+        x2, y2 = planet_points[p2]
+        color = aspect_colors.get(asp['aspect'], 'gray')
+        ax.plot([x1, x2], [y1, y2], color=color, linewidth=0.7)
+
+    ax.set_xlim(-1.2, 1.2)
+    ax.set_ylim(-1.2, 1.2)
 
     buf = io.BytesIO()
     fig.tight_layout()
@@ -313,8 +396,9 @@ def index():
             chart_points = compute_chart_points(jd, lat, lon, hsys)
             houses = compute_house_positions(positions, chart_points['cusps'])
             aspects = compute_aspects(positions)
+            retrogrades = compute_retrogrades(jd)
             ruler = chart_ruler(chart_points['asc'])
-            chart_img = draw_chart_wheel(positions, chart_points['cusps'])
+            chart_img = draw_chart_wheel(positions, chart_points['cusps'], aspects, retrogrades)
             formatted_positions = {n: format_longitude(p) for n, p in positions.items()}
             formatted_asc = format_longitude(chart_points['asc'])
             formatted_mc = format_longitude(chart_points['mc'])
@@ -326,6 +410,7 @@ def index():
                 positions=formatted_positions,
                 houses=houses,
                 aspects=aspects,
+                retrogrades=retrogrades,
                 chart_ruler=ruler,
                 chart_img=chart_img,
                 lat=lat,
