@@ -1,7 +1,7 @@
 # Moon and Sun Natal Chart
 
 This project is a simple Flask web application that generates planetary positions for a natal chart using the [Swiss Ephemeris](https://www.astro.com/swisseph/).
-The application now also calculates major aspects between planets with their orb strength, identifies the chart ruler based on the ascendant sign and draws a chart wheel illustrating the houses and planetary locations. Retrograde markers are displayed for relevant bodies in both the results table and the chart wheel, and Unicode glyphs are used for planets and zodiac signs, house numbers and aspect lines to produce a clear presentation.
+The application now also calculates major aspects between planets with their orb strength, identifies the chart ruler based on the ascendant sign and draws a chart wheel illustrating the houses and planetary locations. Retrograde markers are displayed for relevant bodies in both the results table and the chart wheel, and Unicode glyphs are used for planets and zodiac signs, house numbers and aspect lines to produce a clear presentation. Essential dignities are listed for each planet, aspects to the ascendant and midheaven are shown, and the app recognises simple chart patterns like grand trines and t-squares.
 
 ## Setup
 

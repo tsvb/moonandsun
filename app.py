@@ -315,6 +315,64 @@ def compute_retrogrades(jd):
     return {name: vals[1] < 0 for name, vals in info.items()}
 
 
+def opposite_sign(sign: str) -> str:
+    """Return the sign opposite the given one."""
+    idx = ZODIAC_SIGNS.index(sign)
+    return ZODIAC_SIGNS[(idx + 6) % 12]
+
+
+DOMICILE_SIGNS = {
+    'Sun': ['Leo'],
+    'Moon': ['Cancer'],
+    'Mercury': ['Gemini', 'Virgo'],
+    'Venus': ['Taurus', 'Libra'],
+    'Mars': ['Aries', 'Scorpio'],
+    'Jupiter': ['Sagittarius', 'Pisces'],
+    'Saturn': ['Capricorn', 'Aquarius'],
+    'Uranus': ['Aquarius'],
+    'Neptune': ['Pisces'],
+    'Pluto': ['Scorpio'],
+}
+
+
+EXALTATION_SIGNS = {
+    'Sun': 'Aries',
+    'Moon': 'Taurus',
+    'Mercury': 'Virgo',
+    'Venus': 'Pisces',
+    'Mars': 'Capricorn',
+    'Jupiter': 'Cancer',
+    'Saturn': 'Libra',
+    'Uranus': 'Scorpio',
+    'Neptune': 'Leo',
+    'Pluto': 'Aries',
+}
+
+
+def compute_dignities(positions):
+    """Return essential dignity for each body if applicable."""
+    dignities = {}
+    for name, lon in positions.items():
+        sign_idx = int(lon // 30) % 12
+        sign = ZODIAC_SIGNS[sign_idx]
+        dom = DOMICILE_SIGNS.get(name, [])
+        if sign in dom:
+            dignities[name] = 'Domicile'
+            continue
+        if any(opposite_sign(s) == sign for s in dom):
+            dignities[name] = 'Detriment'
+            continue
+        ex_sign = EXALTATION_SIGNS.get(name)
+        if ex_sign and sign == ex_sign:
+            dignities[name] = 'Exaltation'
+            continue
+        if ex_sign and opposite_sign(ex_sign) == sign:
+            dignities[name] = 'Fall'
+            continue
+        dignities[name] = ''
+    return dignities
+
+
 def angular_distance(lon1, lon2):
     """Return smallest angular distance between two longitudes."""
     diff = abs(lon1 - lon2) % 360
@@ -353,6 +411,64 @@ def compute_aspects(positions):
                     })
     aspects.sort(key=lambda a: a['strength'], reverse=True)
     return aspects
+
+
+def compute_aspects_to_angles(positions, asc, mc):
+    """Return aspects between planets and chart angles."""
+    data = positions.copy()
+    data['Ascendant'] = asc
+    data['Midheaven'] = mc
+    all_aspects = compute_aspects(data)
+    return [
+        a
+        for a in all_aspects
+        if 'Ascendant' in (a['planet1'], a['planet2'])
+        or 'Midheaven' in (a['planet1'], a['planet2'])
+    ]
+
+
+def detect_chart_patterns(aspects):
+    """Identify grand trines and t-squares in the aspect list."""
+    trines = {}
+    oppositions = []
+    squares = []
+    for asp in aspects:
+        p1 = asp['planet1']
+        p2 = asp['planet2']
+        if asp['aspect'] == 'Trine':
+            trines.setdefault(p1, set()).add(p2)
+            trines.setdefault(p2, set()).add(p1)
+        elif asp['aspect'] == 'Opposition':
+            oppositions.append((p1, p2))
+        elif asp['aspect'] == 'Square':
+            squares.append((p1, p2))
+
+    from itertools import combinations
+
+    grand_trines = set()
+    bodies = set(trines.keys())
+    for a, b, c in combinations(sorted(bodies), 3):
+        if (
+            b in trines.get(a, set())
+            and c in trines.get(a, set())
+            and c in trines.get(b, set())
+        ):
+            grand_trines.add(tuple(sorted([a, b, c])))
+
+    square_map = {}
+    for x, y in squares:
+        square_map.setdefault(x, set()).add(y)
+        square_map.setdefault(y, set()).add(x)
+
+    t_squares = set()
+    for x, y in oppositions:
+        for z in square_map.get(x, set()) & square_map.get(y, set()):
+            t_squares.add(tuple(sorted([x, y, z])))
+
+    return {
+        'grand_trines': sorted(grand_trines),
+        't_squares': sorted(t_squares),
+    }
 
 
 def filter_aspects_for_wheel(aspects, max_minor=2):
@@ -558,9 +674,16 @@ def index():
             chart_points = compute_chart_points(jd, lat, lon, hsys)
             houses = compute_house_positions(positions, chart_points['cusps'])
             aspects = compute_aspects(positions)
+            angle_aspects = compute_aspects_to_angles(
+                positions,
+                chart_points['asc'],
+                chart_points['mc'],
+            )
             major_aspects = [a for a in aspects if a['type'] == 'major']
             minor_aspects = [a for a in aspects if a['type'] == 'minor']
             ruler = chart_ruler(chart_points['asc'])
+            dignities = compute_dignities(positions)
+            patterns = detect_chart_patterns(aspects)
             wheel_aspects = filter_aspects_for_wheel(aspects)
             chart_img = draw_chart_wheel(
                 positions,
@@ -581,10 +704,13 @@ def index():
                 positions=formatted_positions,
                 retrogrades=retrogrades,
                 houses=houses,
+                dignities=dignities,
                 major_aspects=major_aspects,
                 minor_aspects=minor_aspects,
+                angle_aspects=angle_aspects,
                 aspects=aspects,
                 chart_ruler=ruler,
+                patterns=patterns,
                 chart_img=chart_img,
                 lat=lat,
                 lon=lon,
