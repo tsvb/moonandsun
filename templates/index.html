@@ -4,6 +4,7 @@
   <title>Natal Chart Generator</title>
   <meta name="description" content="Generate a natal chart with planetary positions, houses and aspects.">
   <meta name="keywords" content="astrology, natal chart, birth chart, horoscope, planets, houses, ascendant, aspects, chart wheel">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
@@ -37,5 +38,13 @@
     </select><br>
     <button type="submit">Generate</button>
   </form>
+  <div id="loading">Loading...</div>
+  <script>
+    const form = document.querySelector('form');
+    const loading = document.getElementById('loading');
+    form.addEventListener('submit', () => {
+      document.body.classList.add('show-loading');
+    });
+  </script>
 </body>
 </html>

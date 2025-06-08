@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, flash
+from flask import Flask, render_template, request, flash, send_file, redirect, url_for
 import swisseph as swe
 import datetime
 import requests
@@ -9,6 +9,10 @@ import base64
 import math
 import matplotlib.pyplot as plt
 import os
+import json
+import re
+import time
+from pathlib import Path
 
 ZODIAC_SIGNS = [
     'Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo',
@@ -52,6 +56,13 @@ SIGN_RULERS = {
     'Aquarius': 'Uranus',
     'Pisces': 'Neptune',
 }
+
+# Directory to store saved chart images and metadata
+CHARTS_DIR = Path('saved_charts')
+CHARTS_DIR.mkdir(exist_ok=True)
+CHARTS_INDEX = CHARTS_DIR / 'charts.json'
+if not CHARTS_INDEX.exists():
+    CHARTS_INDEX.write_text('[]')
 
 # Aspect configuration: aspect angle and maximum orb
 ASPECTS_INFO = {
@@ -111,6 +122,16 @@ ASPECTS_INFO = {
         'keywords': 'pressure, imbalance',
     },
 }
+
+
+def load_charts():
+    with open(CHARTS_INDEX) as f:
+        return json.load(f)
+
+
+def save_charts(charts):
+    with open(CHARTS_INDEX, 'w') as f:
+        json.dump(charts, f)
 
 
 def format_longitude(deg):
@@ -478,6 +499,40 @@ def index():
             flash(str(exc))
             return render_template('index.html')
     return render_template('index.html')
+
+
+@app.route('/save_chart', methods=['POST'])
+def save_chart():
+    name = request.form.get('chart_name', '').strip()
+    img_data = request.form.get('chart_img', '')
+    if not name or not img_data:
+        flash('Chart name and image required')
+        return redirect(url_for('index'))
+    data = img_data.split(',', 1)[-1]
+    img_bytes = base64.b64decode(data)
+    slug = re.sub(r'[^a-zA-Z0-9_-]', '_', name)
+    fname = f"{slug}_{int(time.time())}.png"
+    (CHARTS_DIR / fname).write_bytes(img_bytes)
+    charts = load_charts()
+    charts.append({'name': name, 'file': fname})
+    save_charts(charts)
+    flash('Chart saved')
+    return redirect(url_for('list_charts'))
+
+
+@app.route('/charts')
+def list_charts():
+    charts = load_charts()
+    return render_template('charts.html', charts=charts)
+
+
+@app.route('/download/<path:filename>')
+def download_chart(filename):
+    path = CHARTS_DIR / filename
+    if not path.exists():
+        flash('File not found')
+        return redirect(url_for('index'))
+    return send_file(path, as_attachment=True, download_name=filename)
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -30,3 +30,25 @@ input, select {
 .important {
     background-color: #fffae6;
 }
+
+#loading {
+    display: none;
+    margin-top: 10px;
+}
+
+.show-loading #loading {
+    display: block;
+}
+
+@media (max-width: 600px) {
+    body {
+        margin: 20px;
+    }
+    label {
+        width: 100%;
+    }
+    input, select {
+        width: 100%;
+        box-sizing: border-box;
+    }
+}
