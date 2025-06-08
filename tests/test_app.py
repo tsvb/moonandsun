@@ -13,6 +13,7 @@ from app import (
     compute_aspects,
     chart_ruler,
     compute_retrogrades,
+    filter_aspects_for_wheel,
 )
 
 
@@ -162,5 +163,22 @@ def test_city_lookup_failure(monkeypatch):
     resp = client.post('/', data=data)
     assert resp.status_code == 200
     assert b'City lookup failed' in resp.data
+
+
+def test_filter_aspects_for_wheel():
+    jd = swe.julday(2000, 1, 1, 12.0)
+    positions = compute_positions(jd)
+    aspects = compute_aspects(positions)
+    filtered = filter_aspects_for_wheel(aspects, max_minor=2)
+    # Ensure only a small number of minor aspects remain
+    minor_count = sum(1 for a in filtered if a['type'] == 'minor')
+    assert minor_count <= 2
+    # All major aspects should still be present
+    major = [a for a in aspects if a['type'] == 'major']
+    for ma in major:
+        assert any(
+            ma['planet1'] == f['planet1'] and ma['planet2'] == f['planet2'] and ma['aspect'] == f['aspect']
+            for f in filtered
+        )
 
 
