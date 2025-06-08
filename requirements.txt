@@ -4,3 +4,5 @@ requests
 timezonefinder
 matplotlib
 mpld3
+redis
+psycopg2-binary

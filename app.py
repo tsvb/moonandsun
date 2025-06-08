@@ -146,6 +146,37 @@ THEME = THEMES.get(CHART_THEME, THEMES["light"])
 # enable interactive chart wheel output
 CHART_INTERACTIVE = os.environ.get("CHART_INTERACTIVE", "0") == "1"
 
+# optional WebGL wheel rendering
+WEBGL_WHEEL = os.environ.get("WEBGL_WHEEL", "0") == "1"
+
+# optional Redis caching and PostgreSQL storage
+REDIS_URL = os.environ.get("REDIS_URL")
+DATABASE_URL = os.environ.get("DATABASE_URL")
+
+CACHE = None
+DB_CONN = None
+if REDIS_URL:
+    try:
+        import redis
+
+        CACHE = redis.Redis.from_url(REDIS_URL)
+    except Exception:
+        CACHE = None
+
+if DATABASE_URL:
+    try:
+        import psycopg2
+        import psycopg2.extras
+
+        DB_CONN = psycopg2.connect(DATABASE_URL)
+        DB_CONN.autocommit = True
+        with DB_CONN.cursor() as cur:
+            cur.execute(
+                "CREATE TABLE IF NOT EXISTS charts (id SERIAL PRIMARY KEY, data JSONB)"
+            )
+    except Exception:
+        DB_CONN = None
+
 
 def cleanup_saved_charts(max_age_days: int = 30) -> None:
     """Remove PNG files not referenced in the index or older than max_age_days."""
@@ -234,6 +265,11 @@ ASPECTS_INFO = {
 
 
 def load_charts():
+    if DB_CONN:
+        with DB_CONN.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT data FROM charts ORDER BY id DESC")
+            rows = cur.fetchall()
+        return [r["data"] for r in rows]
     with open(CHARTS_INDEX) as f:
         try:
             return json.load(f)
@@ -242,6 +278,12 @@ def load_charts():
 
 
 def save_charts(charts):
+    if DB_CONN:
+        with DB_CONN.cursor() as cur:
+            cur.execute("TRUNCATE charts")
+            for chart in charts:
+                cur.execute("INSERT INTO charts (data) VALUES (%s)", (json.dumps(chart),))
+        return
     with open(CHARTS_INDEX, "w") as f:
         json.dump(charts, f)
 
@@ -409,8 +451,23 @@ def compute_body_info(jd, node_type: str = "mean"):
 
 def compute_positions(jd, node_type: str = "mean"):
     """Return ecliptic longitudes of major bodies for given Julian day."""
+    cache_key = None
+    if CACHE:
+        cache_key = f"positions:{jd}:{node_type}"
+        cached = CACHE.get(cache_key)
+        if cached:
+            try:
+                return json.loads(cached)
+            except Exception:
+                pass
     info = compute_body_info(jd, node_type)
-    return {name: vals[0] for name, vals in info.items()}
+    result = {name: vals[0] for name, vals in info.items()}
+    if CACHE and cache_key:
+        try:
+            CACHE.setex(cache_key, 86400, json.dumps(result))
+        except Exception:
+            pass
+    return result
 
 
 def compute_retrogrades(jd, node_type: str = "mean"):
@@ -870,6 +927,10 @@ def draw_chart_wheel(
     """Return a chart wheel as base64 PNG or interactive HTML.
 
     The ascendant and midheaven can be highlighted if provided."""
+    if WEBGL_WHEEL:
+        return draw_chart_wheel_webgl(
+            positions, cusps, aspects, retrogrades, asc=asc, mc=mc
+        )
     if aspects is None:
         aspects = []
     if retrogrades is None:
@@ -1039,6 +1100,18 @@ def draw_chart_wheel(
     finally:
         if fig:
             plt.close(fig)
+
+
+def draw_chart_wheel_webgl(
+    positions,
+    cusps,
+    aspects=None,
+    retrogrades=None,
+    asc=None,
+    mc=None,
+):
+    """Return a placeholder WebGL wheel."""
+    return "<canvas id='wheel'></canvas>"
 
 
 def chart_ruler(asc_longitude):
@@ -1261,6 +1334,27 @@ def save_chart():
 def list_charts():
     charts = load_charts()
     return render_template("charts.html", charts=charts)
+
+
+@app.route("/api/charts")
+def api_charts():
+    charts = load_charts()
+    name_filter = request.args.get("name", "").lower()
+    if name_filter:
+        charts = [c for c in charts if name_filter in c.get("name", "").lower()]
+    try:
+        page = max(1, int(request.args.get("page", 1)))
+        limit = max(1, min(100, int(request.args.get("limit", 20))))
+    except ValueError:
+        page = 1
+        limit = 20
+    start = (page - 1) * limit
+    end = start + limit
+    return {
+        "results": charts[start:end],
+        "total": len(charts),
+        "page": page,
+    }
 
 
 @app.route("/download/<path:filename>")
