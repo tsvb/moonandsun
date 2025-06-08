@@ -10,6 +10,31 @@ ZODIAC_SIGNS = [
     'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'
 ]
 
+# Mapping of zodiac signs to their ruling planets for chart ruler detection
+SIGN_RULERS = {
+    'Aries': 'Mars',
+    'Taurus': 'Venus',
+    'Gemini': 'Mercury',
+    'Cancer': 'Moon',
+    'Leo': 'Sun',
+    'Virgo': 'Mercury',
+    'Libra': 'Venus',
+    'Scorpio': 'Pluto',
+    'Sagittarius': 'Jupiter',
+    'Capricorn': 'Saturn',
+    'Aquarius': 'Uranus',
+    'Pisces': 'Neptune',
+}
+
+# Aspect configuration: aspect angle and maximum orb
+ASPECTS_INFO = {
+    'Conjunction': {'angle': 0, 'orb': 8},
+    'Opposition': {'angle': 180, 'orb': 8},
+    'Square': {'angle': 90, 'orb': 6},
+    'Trine': {'angle': 120, 'orb': 6},
+    'Sextile': {'angle': 60, 'orb': 4},
+}
+
 
 def format_longitude(deg):
     """Return a string like "10° Capricorn 30'" for a longitude."""
@@ -78,6 +103,43 @@ def compute_positions(jd):
         positions[name] = lon_lat_dist[0]
     return positions
 
+
+def angular_distance(lon1, lon2):
+    """Return smallest angular distance between two longitudes."""
+    diff = abs(lon1 - lon2) % 360
+    if diff > 180:
+        diff = 360 - diff
+    return diff
+
+
+def compute_aspects(positions):
+    """Return list of major aspects between bodies with orb and strength."""
+    aspects = []
+    names = list(positions.keys())
+    for i in range(len(names)):
+        for j in range(i + 1, len(names)):
+            p1 = names[i]
+            p2 = names[j]
+            diff = angular_distance(positions[p1], positions[p2])
+            for aspect, info in ASPECTS_INFO.items():
+                orb = abs(diff - info['angle'])
+                if orb <= info['orb']:
+                    strength = max(0.0, 1 - orb / info['orb'])
+                    aspects.append({
+                        'planet1': p1,
+                        'planet2': p2,
+                        'aspect': aspect,
+                        'orb': orb,
+                        'strength': strength,
+                    })
+    return aspects
+
+
+def chart_ruler(asc_longitude):
+    """Return the planetary ruler of the ascendant sign."""
+    sign = ZODIAC_SIGNS[int(asc_longitude // 30) % 12]
+    return SIGN_RULERS.get(sign)
+
 app = Flask(__name__)
 app.secret_key = 'development-secret-key'
 
@@ -137,6 +199,8 @@ def index():
             positions = compute_positions(jd)
             chart_points = compute_chart_points(jd, lat, lon, hsys)
             houses = compute_house_positions(positions, chart_points['cusps'])
+            aspects = compute_aspects(positions)
+            ruler = chart_ruler(chart_points['asc'])
             formatted_positions = {n: format_longitude(p) for n, p in positions.items()}
             formatted_asc = format_longitude(chart_points['asc'])
             formatted_mc = format_longitude(chart_points['mc'])
@@ -145,6 +209,8 @@ def index():
                 'chart.html',
                 positions=formatted_positions,
                 houses=houses,
+                aspects=aspects,
+                chart_ruler=ruler,
                 lat=lat,
                 lon=lon,
                 dt=dt,
