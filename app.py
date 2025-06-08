@@ -86,8 +86,8 @@ def compute_chart_points(jd, lat, lon, hsys=b'P'):
         'cusps': list(cusps),
     }
 
-def compute_positions(jd):
-    """Return ecliptic longitudes of major bodies for given Julian day."""
+def compute_body_info(jd):
+    """Return longitude and speed for each major body for the given Julian day."""
     planets = {
         'Sun': swe.SUN,
         'Moon': swe.MOON,
@@ -101,11 +101,21 @@ def compute_positions(jd):
         'Pluto': swe.PLUTO,
         'Mean Node': swe.MEAN_NODE,
     }
-    positions = {}
+    info = {}
     for name, body in planets.items():
-        lon_lat_dist = swe.calc_ut(jd, body)[0]
-        positions[name] = lon_lat_dist[0]
-    return positions
+        vals = swe.calc_ut(jd, body)[0]
+        info[name] = (vals[0], vals[3])
+    return info
+
+def compute_positions(jd):
+    """Return ecliptic longitudes of major bodies for given Julian day."""
+    info = compute_body_info(jd)
+    return {name: vals[0] for name, vals in info.items()}
+
+def compute_retrogrades(jd):
+    """Return True for bodies that are retrograde on the given day."""
+    info = compute_body_info(jd)
+    return {name: vals[1] < 0 for name, vals in info.items()}
 
 
 def angular_distance(lon1, lon2):
