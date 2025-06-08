@@ -20,21 +20,21 @@
   {% endwith %}
   <form method="post">
     <label>Date of birth:</label>
-    <input type="date" name="date" required><br>
+    <input type="date" name="date" required value="{{ date_value|default('') }}"><br>
     <label>Time of birth:</label>
-    <input type="time" name="time" required><br>
+    <input type="time" name="time" required value="{{ time_value|default('') }}"><br>
     <label>City (optional):</label>
-    <input type="text" name="city"><br>
+    <input type="text" name="city" value="{{ city_value|default('') }}"><br>
     <label>Timezone offset from UTC (e.g., -5 for EST, leave blank for auto):</label>
-    <input type="number" name="tz_offset" step="any"><br>
+    <input type="number" name="tz_offset" step="any" value="{{ tz_offset_value|default('') }}"><br>
     <label>Latitude:</label>
-    <input type="number" name="latitude" step="any"><br>
+    <input type="number" name="latitude" step="any" value="{{ lat_value|default('') }}"><br>
     <label>Longitude:</label>
-    <input type="number" name="longitude" step="any"><br>
+    <input type="number" name="longitude" step="any" value="{{ lon_value|default('') }}"><br>
     <label>House system:</label>
     <select name="house_system">
-      <option value="P">Placidus</option>
-      <option value="W">Whole Sign</option>
+      <option value="P" {% if house_system_value == 'P' %}selected{% endif %}>Placidus</option>
+      <option value="W" {% if house_system_value == 'W' %}selected{% endif %}>Whole Sign</option>
     </select><br>
     <button type="submit">Generate</button>
   </form>
@@ -42,8 +42,10 @@
   <script>
     const form = document.querySelector('form');
     const loading = document.getElementById('loading');
-    form.addEventListener('submit', () => {
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
       document.body.classList.add('show-loading');
+      setTimeout(() => form.submit(), 0);
     });
   </script>
   <p><a href="{{ url_for('list_charts') }}">View saved charts</a></p>

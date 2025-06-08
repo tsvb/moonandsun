@@ -14,7 +14,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 pip install -r requirements-dev.txt  # for running tests
 ```
-The `requirements.txt` file now includes `matplotlib` which is used to draw the chart wheel.
+The `requirements.txt` file now includes `matplotlib` which is used to draw the chart wheel. The Swiss Ephemeris Python bindings (`pyswisseph`) are an absolute requirement for running the application and executing the automated tests.
 
 The application uses Flask sessions and expects a secret key. Set the
 `SECRET_KEY` environment variable to override the default development key.
