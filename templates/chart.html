@@ -104,7 +104,7 @@
     {% endfor %}
   </ul>
 
-  <h2>House Cusps ({{ house_system }})</h2>
+  <h2>House Cusps ({{ house_systems.get(house_system, house_system) }})</h2>
   <table border="1">
     <tr><th>House</th><th>Cusp Longitude</th></tr>
     {% for cusp in cusps %}

@@ -33,8 +33,9 @@
     <input type="number" name="longitude" step="any" value="{{ lon_value|default('') }}"><br>
     <label>House system:</label>
     <select name="house_system">
-      <option value="P" {% if house_system_value == 'P' %}selected{% endif %}>Placidus</option>
-      <option value="W" {% if house_system_value == 'W' %}selected{% endif %}>Whole Sign</option>
+      {% for code, name in house_systems.items() %}
+      <option value="{{ code }}" {% if house_system_value == code %}selected{% endif %}>{{ name }}</option>
+      {% endfor %}
     </select><br>
     <button type="submit">Generate</button>
   </form>

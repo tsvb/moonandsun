@@ -57,6 +57,16 @@ SIGN_RULERS = {
     'Pisces': 'Neptune',
 }
 
+HOUSE_SYSTEMS = {
+    'P': 'Placidus',
+    'W': 'Whole Sign',
+    'K': 'Koch',
+    'E': 'Equal House',
+    'C': 'Campanus',
+    'R': 'Regiomontanus',
+    'O': 'Porphyry',
+}
+
 # Directory to store saved chart images and metadata
 CHARTS_DIR = Path('saved_charts')
 CHARTS_DIR.mkdir(exist_ok=True)
@@ -722,6 +732,7 @@ def index():
                 part_of_fortune=formatted_pof,
                 cusps=formatted_cusps,
                 house_system=hsys.decode(),
+                house_systems=HOUSE_SYSTEMS,
             )
         except Exception as exc:
             flash(str(exc))
@@ -734,6 +745,7 @@ def index():
                 lat_value=request.form.get('latitude', ''),
                 lon_value=request.form.get('longitude', ''),
                 house_system_value=request.form.get('house_system', 'P'),
+                house_systems=HOUSE_SYSTEMS,
             )
     return render_template(
         'index.html',
@@ -744,6 +756,7 @@ def index():
         lat_value='',
         lon_value='',
         house_system_value='P',
+        house_systems=HOUSE_SYSTEMS,
     )
 
 
@@ -848,6 +861,7 @@ def edit_chart(filename):
         lat_value=md.get('latitude', ''),
         lon_value=md.get('longitude', ''),
         house_system_value=md.get('house_system', 'P'),
+        house_systems=HOUSE_SYSTEMS,
     )
 
 if __name__ == '__main__':
