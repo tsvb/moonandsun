@@ -9,6 +9,8 @@ from app import (
     compute_chart_points,
     format_longitude,
     compute_house_positions,
+    compute_aspects,
+    chart_ruler,
 )
 
 
@@ -56,3 +58,15 @@ def test_index_post_positions():
     chart_points_w = compute_chart_points(jd, 0, 0, b'W')
     cusp1_w = format_longitude(chart_points_w['cusps'][0]).replace("'", "&#39;").encode()
     assert cusp1_w in resp2.data
+
+
+def test_aspects_and_chart_ruler():
+    jd = swe.julday(2000, 1, 1, 12.0)
+    positions = compute_positions(jd)
+    aspects = compute_aspects(positions)
+    assert any(
+        a['planet1'] == 'Sun' and a['planet2'] == 'Saturn' and a['aspect'] == 'Trine'
+        for a in aspects
+    )
+    chart_points = compute_chart_points(jd, 0, 0, b'P')
+    assert chart_ruler(chart_points['asc']) == 'Mars'
