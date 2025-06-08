@@ -502,6 +502,12 @@ def index():
             lon_str = request.form.get('longitude', '').strip()
             hsys = request.form.get('house_system', 'P').encode()
 
+            dt_local = datetime.datetime.strptime(
+                f"{date_str} {time_str}", "%Y-%m-%d %H:%M"
+            )
+            if dt_local.year < 1800 or dt_local.year > 2100:
+                raise ValueError('Date must be between 1800 and 2100')
+
             # Resolve coordinates from city name if provided
             if city and (not lat_str or not lon_str):
                 try:
@@ -509,7 +515,7 @@ def index():
                         'https://nominatim.openstreetmap.org/search',
                         params={'q': city, 'format': 'json', 'limit': 1},
                         headers={'User-Agent': 'moonandsun'},
-                        timeout=10
+                        timeout=20
                     )
                     resp.raise_for_status()
                     data = resp.json()
@@ -529,7 +535,7 @@ def index():
 
             if tz_offset_str:
                 tz_offset = float(tz_offset_str)
-                dt = datetime.datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
+                dt = dt_local
                 dt_utc = dt - datetime.timedelta(hours=tz_offset)
             else:
                 tf = TimezoneFinder()
@@ -537,7 +543,7 @@ def index():
                 if not tzname:
                     raise ValueError('Could not determine timezone')
                 tzinfo = ZoneInfo(tzname)
-                dt = datetime.datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M").replace(tzinfo=tzinfo)
+                dt = dt_local.replace(tzinfo=tzinfo)
                 dt_utc = dt.astimezone(datetime.timezone.utc)
 
             jd = swe.julday(

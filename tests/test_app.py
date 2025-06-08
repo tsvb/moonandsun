@@ -182,3 +182,18 @@ def test_filter_aspects_for_wheel():
         )
 
 
+def test_birth_date_validation():
+    client = app.test_client()
+    data = {
+        'date': '1700-01-01',
+        'time': '12:00',
+        'tz_offset': '0',
+        'latitude': '0',
+        'longitude': '0',
+        'house_system': 'P'
+    }
+    resp = client.post('/', data=data)
+    assert resp.status_code == 200
+    assert b'Date must be between' in resp.data
+
+
