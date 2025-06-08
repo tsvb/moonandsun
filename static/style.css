@@ -73,3 +73,75 @@ input, select {
 .show-loading #loading {
     display: block;
 }
+.planet-dot {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.planet-dot:hover {
+    r: 8;
+    fill: #ff6b35;
+}
+.aspect-line {
+    transition: stroke-width 0.3s ease, opacity 0.3s ease;
+}
+.aspect-line:hover {
+    stroke-width: 3;
+    opacity: 1;
+}
+.house-line {
+    stroke: #333;
+    stroke-width: 0.5;
+}
+.house-line.angular {
+    stroke-width: 2;
+    stroke: #000;
+}
+.zodiac-glyph {
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+    fill: #666;
+    text-anchor: middle;
+    dominant-baseline: central;
+}
+.planet-glyph {
+    font-size: 14px;
+    text-anchor: middle;
+    dominant-baseline: central;
+    pointer-events: none;
+}
+.tooltip {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+.zoom-controls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.zoom-btn {
+    width: 30px;
+    height: 30px;
+    border: none;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.zoom-btn:hover {
+    background: rgba(0, 0, 0, 0.9);
+}

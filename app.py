@@ -6,7 +6,6 @@ from timezonefinder import TimezoneFinder
 from zoneinfo import ZoneInfo
 import io
 import base64
-import mpld3
 import math
 import matplotlib.pyplot as plt
 import os
@@ -1085,10 +1084,28 @@ def draw_chart_wheel(
         ax.set_ylim(-1.2, 1.2)
 
         if interactive:
-            scatter = ax.scatter(scatter_x, scatter_y, s=20, alpha=0)
-            tooltip = mpld3.plugins.PointLabelTooltip(scatter, labels)
-            mpld3.plugins.connect(fig, tooltip, mpld3.plugins.Zoom())
-            return mpld3.fig_to_html(fig)
+            data = {
+                "positions": positions,
+                "cusps": cusps,
+                "aspects": aspects,
+                "retrogrades": retrogrades,
+            }
+            js = url_for("static", filename="d3wheel.js")
+            html = (
+                '<div class="zoom-controls">'
+                '<button class="zoom-btn" id="zoom-in">+</button>'
+                '<button class="zoom-btn" id="zoom-out">−</button>'
+                '<button class="zoom-btn" id="reset">⌂</button>'
+                '</div>'
+                '<svg id="chart-wheel"></svg>'
+                '<div class="tooltip" id="tooltip"></div>'
+                '<script '
+                'src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"'
+                '></script>'
+                f'<script src="{js}"></script>'
+                f'<script>initChart("#chart-container", {json.dumps(data)})</script>'
+            )
+            return html
 
         buf = io.BytesIO()
         fig.tight_layout()
