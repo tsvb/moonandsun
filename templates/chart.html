@@ -9,6 +9,21 @@
 <body>
   <h1>Natal Chart</h1>
   <img src="data:image/png;base64,{{ chart_img }}" alt="Chart Wheel">
+  <button id="download-btn" type="button">Download PNG</button>
+  <form action="{{ url_for('save_chart') }}" method="post" style="margin-top:10px;">
+    <input type="hidden" name="chart_img" value="{{ chart_img }}">
+    <label>Name this chart:</label>
+    <input type="text" name="chart_name">
+    <button type="submit">Save</button>
+  </form>
+  <script>
+    document.getElementById('download-btn').addEventListener('click', function(){
+      const link = document.createElement('a');
+      link.href = 'data:image/png;base64,{{ chart_img }}';
+      link.download = 'chart.png';
+      link.click();
+    });
+  </script>
   <p>Birth time (local): {{ dt }}</p>
   <p>Converted to UTC: {{ dt_utc }}</p>
   <p>Coordinates: {{ lat }}, {{ lon }}</p>

@@ -1,0 +1,21 @@
+<!doctype html>
+<html>
+<head>
+  <title>Saved Charts</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <h1>Saved Charts</h1>
+  <ul>
+  {% for c in charts %}
+    <li>
+      {{ c.name }} - <a href="{{ url_for('download_chart', filename=c.file) }}">Download</a>
+    </li>
+  {% else %}
+    <li>No charts saved.</li>
+  {% endfor %}
+  </ul>
+  <a href="{{ url_for('index') }}">Back</a>
+</body>
+</html>
