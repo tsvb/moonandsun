@@ -17,6 +17,7 @@ from app import (
     compute_dignities,
     compute_aspects_to_angles,
     detect_chart_patterns,
+    compute_synastry_aspects,
 )
 
 
@@ -263,5 +264,17 @@ def test_true_node_option():
     assert 'Mean Node' in mean_pos
     assert 'True Node' in true_pos
     assert mean_pos['Mean Node'] != true_pos['True Node']
+
+
+def test_compute_synastry_aspects():
+    chart1 = {'Sun': 0.0, 'Moon': 90.0}
+    chart2 = {'Sun': 180.0, 'Moon': 0.0}
+    syn = compute_synastry_aspects(chart1, chart2)
+    cross = syn['cross_aspects']
+    assert any(
+        a['planet1'] == 'Sun' and a['planet2'] == 'Sun' and a['aspect'] == 'Opposition'
+        for a in cross
+    )
+    assert syn['composite_positions']['Sun'] == 90.0
 
 
