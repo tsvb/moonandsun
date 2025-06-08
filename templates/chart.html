@@ -6,15 +6,17 @@
 </head>
 <body>
   <h1>Natal Chart</h1>
+  <img src="data:image/png;base64,{{ chart_img }}" alt="Chart Wheel">
   <p>Birth time (local): {{ dt }}</p>
   <p>Converted to UTC: {{ dt_utc }}</p>
   <p>Coordinates: {{ lat }}, {{ lon }}</p>
   <table border="1">
-    <tr><th>Body</th><th>Position</th><th>House</th></tr>
+    <tr><th>Body</th><th>Position</th><th>R</th><th>House</th></tr>
     {% for name, position in positions.items() %}
     <tr>
       <td>{{ name }}</td>
       <td>{{ position }}</td>
+      <td>{% if retrogrades[name] %}R{% endif %}</td>
       <td>{{ houses[name] }}</td>
     </tr>
     {% endfor %}

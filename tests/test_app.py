@@ -11,6 +11,7 @@ from app import (
     compute_house_positions,
     compute_aspects,
     chart_ruler,
+    compute_retrogrades,
 )
 
 
@@ -36,6 +37,7 @@ def test_index_post_positions():
     assert resp.status_code == 200
     jd = swe.julday(2000, 1, 1, 12.0)
     expected = compute_positions(jd)
+    retro = compute_retrogrades(jd)
     chart_points = compute_chart_points(jd, 0, 0, b'P')
     houses = compute_house_positions(expected, chart_points['cusps'])
     # check formatted body positions and house numbers appear
@@ -58,6 +60,12 @@ def test_index_post_positions():
     chart_points_w = compute_chart_points(jd, 0, 0, b'W')
     cusp1_w = format_longitude(chart_points_w['cusps'][0]).replace("'", "&#39;").encode()
     assert cusp1_w in resp2.data
+    assert b'data:image/png;base64' in resp.data
+    assert b'Saturn' in resp.data
+    import re
+    assert re.search(b'Saturn.*?R</td>', resp.data, re.S)
+    assert retro['Saturn'] is True
+    assert retro['Sun'] is False
 
 
 def test_aspects_and_chart_ruler():
@@ -70,3 +78,6 @@ def test_aspects_and_chart_ruler():
     )
     chart_points = compute_chart_points(jd, 0, 0, b'P')
     assert chart_ruler(chart_points['asc']) == 'Mars'
+    retro = compute_retrogrades(jd)
+    assert retro['Saturn'] is True
+

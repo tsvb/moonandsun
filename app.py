@@ -4,6 +4,10 @@ import datetime
 import requests
 from timezonefinder import TimezoneFinder
 from zoneinfo import ZoneInfo
+import io
+import base64
+import math
+import matplotlib.pyplot as plt
 
 ZODIAC_SIGNS = [
     'Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo',
@@ -104,6 +108,28 @@ def compute_positions(jd):
     return positions
 
 
+def compute_retrogrades(jd):
+    """Return mapping of body name to boolean retrograde flag."""
+    planets = {
+        'Sun': swe.SUN,
+        'Moon': swe.MOON,
+        'Mercury': swe.MERCURY,
+        'Venus': swe.VENUS,
+        'Mars': swe.MARS,
+        'Jupiter': swe.JUPITER,
+        'Saturn': swe.SATURN,
+        'Uranus': swe.URANUS,
+        'Neptune': swe.NEPTUNE,
+        'Pluto': swe.PLUTO,
+        'Mean Node': swe.MEAN_NODE,
+    }
+    retrogrades = {}
+    for name, body in planets.items():
+        lon_lat_dist = swe.calc_ut(jd, body)[0]
+        retrogrades[name] = lon_lat_dist[3] < 0
+    return retrogrades
+
+
 def angular_distance(lon1, lon2):
     """Return smallest angular distance between two longitudes."""
     diff = abs(lon1 - lon2) % 360
@@ -133,6 +159,32 @@ def compute_aspects(positions):
                         'strength': strength,
                     })
     return aspects
+
+
+def draw_chart_wheel(positions, cusps):
+    """Return base64-encoded PNG of a simple chart wheel."""
+    fig, ax = plt.subplots(figsize=(6, 6), subplot_kw={'projection': 'polar'})
+    ax.set_theta_direction(-1)
+    ax.set_theta_offset(math.radians(90))
+    ax.set_yticklabels([])
+    ax.set_xticklabels([])
+
+    # draw house cusps
+    for cusp in cusps:
+        theta = math.radians(90 - cusp)
+        ax.plot([theta, theta], [0, 1], color='black', linewidth=0.5)
+
+    # plot planet positions
+    for name, lon in positions.items():
+        theta = math.radians(90 - lon)
+        ax.plot(theta, 0.8, 'o')
+        ax.text(theta, 0.85, name[0], ha='center', va='center', fontsize=8)
+
+    buf = io.BytesIO()
+    fig.tight_layout()
+    plt.savefig(buf, format='png')
+    plt.close(fig)
+    return base64.b64encode(buf.getvalue()).decode()
 
 
 def chart_ruler(asc_longitude):
@@ -197,10 +249,12 @@ def index():
             )
 
             positions = compute_positions(jd)
+            retrogrades = compute_retrogrades(jd)
             chart_points = compute_chart_points(jd, lat, lon, hsys)
             houses = compute_house_positions(positions, chart_points['cusps'])
             aspects = compute_aspects(positions)
             ruler = chart_ruler(chart_points['asc'])
+            chart_img = draw_chart_wheel(positions, chart_points['cusps'])
             formatted_positions = {n: format_longitude(p) for n, p in positions.items()}
             formatted_asc = format_longitude(chart_points['asc'])
             formatted_mc = format_longitude(chart_points['mc'])
@@ -211,6 +265,8 @@ def index():
                 houses=houses,
                 aspects=aspects,
                 chart_ruler=ruler,
+                chart_img=chart_img,
+                retrogrades=retrogrades,
                 lat=lat,
                 lon=lon,
                 dt=dt,
