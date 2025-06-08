@@ -31,3 +31,17 @@ Run the automated tests with:
 ```bash
 pytest
 ```
+
+## Packaging
+
+You can create standalone executables for Windows, macOS and Linux using [PyInstaller](https://www.pyinstaller.org/). The repository includes a `natal_chart.spec` file that bundles the templates and license.
+Binary icon assets are not included in the repository (some tools cannot display them in diffs). Provide your own icon files inside the `icons/` directory (e.g. `icon.ico` for Windows and `icon.icns` for macOS) if you want a custom installer graphic.
+
+Install PyInstaller and run it with the spec file:
+
+```bash
+pip install pyinstaller
+pyinstaller natal_chart.spec
+```
+
+The resulting executable will be placed in the `dist/` directory. If you added `icons/icon.ico` before building on Windows (or `icon.icns` on macOS) the installer will include it automatically.
