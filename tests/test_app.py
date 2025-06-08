@@ -3,7 +3,13 @@ from pathlib import Path
 import swisseph as swe
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
-from app import app, compute_positions, compute_chart_points
+from app import (
+    app,
+    compute_positions,
+    compute_chart_points,
+    format_longitude,
+    compute_house_positions,
+)
 
 
 def test_index_get():
@@ -28,15 +34,19 @@ def test_index_post_positions():
     assert resp.status_code == 200
     jd = swe.julday(2000, 1, 1, 12.0)
     expected = compute_positions(jd)
-    # Check a couple of bodies rounded to two decimals
-    sun_lon = f"{expected['Sun']:.2f}".encode()
-    moon_lon = f"{expected['Moon']:.2f}".encode()
-    assert sun_lon in resp.data
-    assert moon_lon in resp.data
     chart_points = compute_chart_points(jd, 0, 0, b'P')
-    asc_lon = f"{chart_points['asc']:.2f}".encode()
-    cusp1 = f"{chart_points['cusps'][0]:.2f}".encode()
-    assert asc_lon in resp.data
+    houses = compute_house_positions(expected, chart_points['cusps'])
+    # check formatted body positions and house numbers appear
+    sun_pos = format_longitude(expected['Sun']).replace("'", "&#39;").encode()
+    moon_pos = format_longitude(expected['Moon']).replace("'", "&#39;").encode()
+    assert sun_pos in resp.data
+    assert moon_pos in resp.data
+    sun_house_fragment = f">{houses['Sun']}<".encode()
+    assert sun_house_fragment in resp.data
+    # also check ascendant and first cusp formatting
+    asc_str = format_longitude(chart_points['asc']).replace("'", "&#39;").encode()
+    cusp1 = format_longitude(chart_points['cusps'][0]).replace("'", "&#39;").encode()
+    assert asc_str in resp.data
     assert cusp1 in resp.data
 
     # Check whole sign houses differ
@@ -44,5 +54,5 @@ def test_index_post_positions():
     resp2 = client.post('/', data=data)
     assert resp2.status_code == 200
     chart_points_w = compute_chart_points(jd, 0, 0, b'W')
-    cusp1_w = f"{chart_points_w['cusps'][0]:.2f}".encode()
+    cusp1_w = format_longitude(chart_points_w['cusps'][0]).replace("'", "&#39;").encode()
     assert cusp1_w in resp2.data
