@@ -316,6 +316,18 @@ def compute_aspects(positions):
     return aspects
 
 
+def filter_aspects_for_wheel(aspects, max_minor=2):
+    """Return aspects to draw on the chart wheel.
+
+    All major aspects are included. Minor aspects are sorted by strength and the
+    strongest few are kept to reduce clutter on the wheel."""
+
+    major = [a for a in aspects if a.get('type') == 'major']
+    minor = [a for a in aspects if a.get('type') != 'major']
+    minor.sort(key=lambda a: a['strength'], reverse=True)
+    return major + minor[:max_minor]
+
+
 def draw_chart_wheel(positions, cusps, aspects=None, retrogrades=None):
     """Return base64-encoded PNG of an improved chart wheel."""
     if aspects is None:
@@ -473,7 +485,8 @@ def index():
             major_aspects = [a for a in aspects if a['type'] == 'major']
             minor_aspects = [a for a in aspects if a['type'] == 'minor']
             ruler = chart_ruler(chart_points['asc'])
-            chart_img = draw_chart_wheel(positions, chart_points['cusps'], aspects, retrogrades)
+            wheel_aspects = filter_aspects_for_wheel(aspects)
+            chart_img = draw_chart_wheel(positions, chart_points['cusps'], wheel_aspects, retrogrades)
             formatted_positions = {n: format_longitude(p) for n, p in positions.items()}
             formatted_asc = format_longitude(chart_points['asc'])
             formatted_mc = format_longitude(chart_points['mc'])
